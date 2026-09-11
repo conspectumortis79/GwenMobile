@@ -18,6 +18,7 @@
 		27049FFD91EC60CC9AC85F84 /* SystemPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC62B1DD6F8C5335DBC98914 /* SystemPromptTests.swift */; };
 		2887B9BB59B2B6B242FB91A4 /* GwenMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F8D35447512097A7A6329DD /* GwenMobileApp.swift */; };
 		2A48BE12FC0D4FA84BFC0338 /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C624A9D2BB79A65ECD118A0A /* RealtimeClient.swift */; };
+		2FBA7C55E37B7478597F710E /* ProcessingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4405A48129193BDCBCA9499E /* ProcessingIndicator.swift */; };
 		30F8A34300C813A43C157CBD /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE3F063E06C313BC2E176E62 /* L10n.swift */; };
 		34D9A1E618C94827989B0ED2 /* CameraPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 270F477AC1CF86ABB1F5C375 /* CameraPresenter.swift */; };
 		3661BE87F511AEFBE425E83B /* MarkdownRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A429026AB2FF9C46D316118 /* MarkdownRendererTests.swift */; };
@@ -32,6 +33,7 @@
 		5856F4385D9902CF57E8D67A /* WAVCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052389F9C1DDDC724794A144 /* WAVCodec.swift */; };
 		5AA8E73415E6A637CFE8FD43 /* Bubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089BC76D609665E27CBC7DC1 /* Bubble.swift */; };
 		5FD429C1BB22B587E82E21D0 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F8105DD5A3827046E43EF23 /* SettingsView.swift */; };
+		6209C543B6535A2053D815EA /* ProcessingRhythmTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B66328ED6A12479F1B8427 /* ProcessingRhythmTests.swift */; };
 		67DEA5FFE1DEDFFDC6E12B92 /* ModelFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E08FF257303AA4B9C3AB6E8B /* ModelFilterTests.swift */; };
 		6A469E31EE3B5AB4B2D7549D /* VoiceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2565E25857474CC58E1991 /* VoiceTranscriber.swift */; };
 		737A67D2F1AFE983CEFEA500 /* ImageFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7486036C22301522531F6E2A /* ImageFeed.swift */; };
@@ -101,6 +103,7 @@
 		2AFED3E44AC10CB45825094A /* CalendarChoiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChoiceTests.swift; sourceTree = "<group>"; };
 		2E1B631FF83274A2BAC3EAC4 /* SystemPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPrompt.swift; sourceTree = "<group>"; };
 		39309C52D51D22AA62F0431B /* DebugSweep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSweep.swift; sourceTree = "<group>"; };
+		4405A48129193BDCBCA9499E /* ProcessingIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingIndicator.swift; sourceTree = "<group>"; };
 		4517B39D2DA20FF51F7B5A4E /* StreamThrottleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamThrottleTests.swift; sourceTree = "<group>"; };
 		49A88E6380FD21FA2B07D842 /* ImagePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePolicy.swift; sourceTree = "<group>"; };
 		4D85DFDA39B9A8282E193770 /* AnswerErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnswerErrorTests.swift; sourceTree = "<group>"; };
@@ -151,6 +154,7 @@
 		E59E251FED9CD3E6C962A328 /* GwenMobile.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GwenMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ECA64393C8BD2DFBE57235A0 /* CalendarAuthorizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarAuthorizationTests.swift; sourceTree = "<group>"; };
 		EE0CDE44D098C35E2386D200 /* AttachmentImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentImage.swift; sourceTree = "<group>"; };
+		F2B66328ED6A12479F1B8427 /* ProcessingRhythmTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingRhythmTests.swift; sourceTree = "<group>"; };
 		F58030CA63D9F5D3B6D732E0 /* MediaStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaStore.swift; sourceTree = "<group>"; };
 		F9E745269CBF0FB25E6731C1 /* RatioStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatioStore.swift; sourceTree = "<group>"; };
 		FC62B1DD6F8C5335DBC98914 /* SystemPromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPromptTests.swift; sourceTree = "<group>"; };
@@ -174,6 +178,7 @@
 				E49A9DC268248DDAE828145E /* LocalizationTests.swift */,
 				2A429026AB2FF9C46D316118 /* MarkdownRendererTests.swift */,
 				E08FF257303AA4B9C3AB6E8B /* ModelFilterTests.swift */,
+				F2B66328ED6A12479F1B8427 /* ProcessingRhythmTests.swift */,
 				9E76BA900513E7D50BAF877E /* RequestBuildingTests.swift */,
 				E080E9ABAB6E928A04F739DE /* SendRouterTests.swift */,
 				FDCB53F816AD72AB27BC0BF4 /* StorageTests.swift */,
@@ -220,6 +225,7 @@
 				7FAB0CCD15AA534E1297706C /* ModelFilter.swift */,
 				6315B4D8328F194CDBDE6A33 /* Models.swift */,
 				673C379E9F2E2A39692BF3C3 /* PerfMonitoring.swift */,
+				4405A48129193BDCBCA9499E /* ProcessingIndicator.swift */,
 				74FFB9D8E673D0DF55284898 /* QwenAPI.swift */,
 				F9E745269CBF0FB25E6731C1 /* RatioStore.swift */,
 				C624A9D2BB79A65ECD118A0A /* RealtimeClient.swift */,
@@ -363,6 +369,7 @@
 				DE4E105D5DE34774DDEB3C18 /* LocalizationTests.swift in Sources */,
 				3661BE87F511AEFBE425E83B /* MarkdownRendererTests.swift in Sources */,
 				67DEA5FFE1DEDFFDC6E12B92 /* ModelFilterTests.swift in Sources */,
+				6209C543B6535A2053D815EA /* ProcessingRhythmTests.swift in Sources */,
 				47398D8331EB6808BD012259 /* RequestBuildingTests.swift in Sources */,
 				FC1A9D03465EF43267BD2F06 /* SendRouterTests.swift in Sources */,
 				9604BFC3404EAB5E85173CA5 /* StorageTests.swift in Sources */,
@@ -407,6 +414,7 @@
 				D5F6A954320639BB55A57881 /* ModelFilter.swift in Sources */,
 				D9DF6A3DEC1FE4E9248AED18 /* Models.swift in Sources */,
 				B4E600BCF07641BD03C860BC /* PerfMonitoring.swift in Sources */,
+				2FBA7C55E37B7478597F710E /* ProcessingIndicator.swift in Sources */,
 				BC2E76669B13C2E6BCA36A1A /* QwenAPI.swift in Sources */,
 				401CF7474F5CEC776A42ADB2 /* RatioStore.swift in Sources */,
 				2A48BE12FC0D4FA84BFC0338 /* RealtimeClient.swift in Sources */,

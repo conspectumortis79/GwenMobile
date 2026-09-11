@@ -179,7 +179,10 @@ struct SettingsView: View {
                             action: @escaping () -> Void) -> some View {
         Button(action: action) {
             if busy {
-                HStack { ProgressView(); Text(busyTitle) }
+                HStack(spacing: 8) {
+                    Text(busyTitle)
+                    ProcessingDots(tint: Color.accentColor)
+                }
             } else if let symbol {
                 Label(title, systemImage: symbol)
             } else {

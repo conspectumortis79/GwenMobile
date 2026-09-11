@@ -227,12 +227,10 @@ struct ChatView: View {
                             .id("streaming")
                     }
                     if voice.state == .processing {
-                        Bubble(text: L.t("asr_working"), isUser: false, streaming: true)
-                            .id("asr_working")
+                        StatusBubble(text: L.t("asr_working")).id("asr_working")
                     }
                     if imageWorking {
-                        Bubble(text: imageWorkingLabel, isUser: false, streaming: true)
-                            .id("image_working")
+                        StatusBubble(text: imageWorkingLabel).id("image_working")
                     }
                     if let webStatus {
                         WebStatusBubble(text: webStatus).id("web_status")

@@ -112,12 +112,11 @@ struct Bubble: View, Equatable {
                         }
                     }
                     if streaming && text.isEmpty {
-                        HStack(spacing: 0) {
-                            TypingDots()
-                        }
-                        .padding(.horizontal, 16).padding(.vertical, 14)
-                        .background(bubbleColor)
-                        .clipShape(BubbleShape(isUser: isUser))
+                        ProcessingLabel(text: L.t("processing"))
+                            .foregroundStyle(isUser ? Color.white : Color.primary)
+                            .padding(.horizontal, 16).padding(.vertical, 14)
+                            .background(bubbleColor)
+                            .clipShape(BubbleShape(isUser: isUser))
                     } else if !text.isEmpty {
                         renderedText
                             .font(.system(size: 17))

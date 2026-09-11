@@ -4,14 +4,12 @@ struct WebStatusBubble: View {
     let text: String
     var body: some View {
         HStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.mini)
-                .tint(.blue)
             Text(text)
                 .font(.system(size: 13.5))
                 .foregroundStyle(Color.primary)
                 .lineLimit(1)
                 .truncationMode(.middle)
+            ProcessingDots()
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
         .background(Capsule().fill(Color(.systemGray5)))
@@ -29,12 +27,13 @@ struct BubbleShape: Shape {
     }
 }
 
-struct TypingDots: View {
+struct StatusBubble: View {
+    let text: String
     var body: some View {
-        HStack(spacing: 5) {
-            ProgressView()
-                .controlSize(.mini)
-                .tint(Color(.systemGray))
-        }
+        ProcessingLabel(text: text)
+            .foregroundStyle(Color.primary)
+            .padding(.horizontal, 16).padding(.vertical, 14)
+            .background(Color(.systemGray5))
+            .clipShape(BubbleShape(isUser: false))
     }
 }

@@ -23,6 +23,22 @@ final class LocalizationTests: XCTestCase {
         }
     }
 
+    func testWaitingLabelsLeaveTheEllipsisToTheAnimation() {
+        let waitingKeys = ["processing", "asr_working", "generating_image", "editing_image",
+                           "cal_working", "web_searching", "web_fetching", "loading_models", "testing"]
+        for key in waitingKeys {
+            guard let values = L.strings[key] else {
+                XCTFail("Warteschleifen-Key fehlt: \(key)")
+                continue
+            }
+            for language in AppLanguage.allCases {
+                let text = values[language] ?? ""
+                XCTAssertFalse(text.hasSuffix("…") || text.hasSuffix("..."), "\(key) [\(language)] trägt eine eigene Ellipse")
+                XCTAssertFalse(text.isEmpty, "\(key) [\(language)] ist leer")
+            }
+        }
+    }
+
     func testUnknownKeyIsReturnedVerbatim() {
         XCTAssertEqual(L.t("dieser_key_existiert_nicht"), "dieser_key_existiert_nicht")
     }
