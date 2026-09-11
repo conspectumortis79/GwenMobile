@@ -6,13 +6,16 @@ Swift 6, strict concurrency, iOS 17+.
 ## Features
 
 ### Chat & conversations
-- Streaming chat answers with a selectable model (e.g. qwen3.8-flash)
+- Streaming chat answers with a selectable model (e.g. qwen3.8-flash) — already formatted
+  while the tokens arrive, not only once the answer is finished
 - Compact input bar: a "+" menu holds photo, camera and read-aloud (with visible
   ON/OFF state); mic and send stay one tap away, so the text field is roughly
   twice as wide
 - Multiple conversations, persisted locally (JSON + images in the app sandbox)
 - API key stored in the Keychain, never in files
 - Bilingual UI (German / English), day separators, timestamps, markdown-lite rendering
+  (bold, inline code, links) applied to the live stream as well; a marker that is still open,
+  like `**` without its partner, simply stays plain text until the closing token arrives
 - Branded header: app icon beside the left-aligned "GwenMobile" title, actions right-aligned
 
 <img src="docs/screenshots/01-chat.png" alt="GwenMobile after launch: empty conversation, header with app icon and title, input bar with plus, mic and send" width="270"> <img src="docs/screenshots/02-plus-menu.png" alt="The plus menu opened above the input bar: Attach photo, Camera and Read aloud with its OFF state" width="270">

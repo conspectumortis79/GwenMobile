@@ -206,17 +206,14 @@ struct Bubble: View, Equatable {
     }
 
     private var renderedText: Text {
-        if streaming { return Text(verbatim: text) }
+        if streaming { return Text(MarkdownRenderer.inline(text)) }
         return markdownText
     }
 
     private var markdownText: Text {
         let key = "s\(sources.count)\u{1}\(text)" as NSString
         if let hit = Self.mdCache.object(forKey: key) { return Text(hit.value) }
-        let parsed = try? AttributedString(
-            markdown: text,
-            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
-        var attr: AttributedString = parsed ?? AttributedString(text)
+        var attr = MarkdownRenderer.inline(text)
         if !isUser && !sources.isEmpty {
             let plain: String = String(attr.characters)
             let ns = plain as NSString
