@@ -33,7 +33,8 @@ Swift 6, strict concurrency, iOS 17+.
   `antwort-2026-09-11-133827.html`.
 - Files land in `Documents/answers` (visible in the Files app under *GwenMobile*, the app has file
   sharing enabled) and the iOS share sheet opens in the same tap, so they can go to Files, Mail,
-  Notes or AirDrop
+  Notes or AirDrop — and whichever of them you use, the sheet is gone again by itself once the file
+  is handed over, saved or cancelled (see *Sharing pictures and saving answers*)
 
 <img src="docs/screenshots/01-chat.png" alt="GwenMobile after launch: empty conversation, header with app icon and title, input bar with plus, mic and send" width="270"> <img src="docs/screenshots/02-plus-menu.png" alt="The plus menu opened above the input bar: Camera first, then Attach photo, then Read aloud with its OFF state" width="270">
 
@@ -117,7 +118,7 @@ Swift 6, strict concurrency, iOS 17+.
 - Long-press any generated image → "Edit" to send it back into the input bar
 - Save results to the Photos app (button or context menu)
 
-### Sharing pictures
+### Sharing pictures and saving answers
 - Long-press any picture in the chat — generated or attached — and choose
   **„Per AirDrop senden"**: the system share sheet opens with AirDrop in the front row, so the
   image goes straight to another Mac, iPhone or iPad without first saving it to the photo library
@@ -125,14 +126,23 @@ Swift 6, strict concurrency, iOS 17+.
 - What is handed over is the stored JPEG file itself, not a re-encoded thumbnail, so the
   receiver gets the same bytes the app shows. If the file has been cleaned away in the meantime,
   the app says so instead of sharing an empty attachment.
-- The instant the picture is handed over to AirDrop the whole share presentation is torn down —
-  the AirDrop window (`SFAirDropViewController`), the sheet above it, everything — and the chat is
-  in front again. The transfer itself keeps running in the system: the file still arrives on the
-  Mac although the app already shows the chat. iOS never reports an AirDrop delivery to the app
-  (`completionWithItemsHandler` stays silent, measured on device), so the hand-over event of the
-  activity item source is what closes the windows — no timer, no time window.
-- Every other activity (Mail, Messages, Notes, printing) closes the sheet as soon as the system
-  reports that activity back, and a sheet the system already tore down is never dismissed twice.
+- Every share flow runs through the same closer, so the chat is in front again by itself: a picture
+  to AirDrop, an answer saved as a file and a hand-over to WhatsApp, Mail, Notes, printing or
+  „In Dateien sichern" all tear the whole share presentation down — the sheet, plus whatever window
+  the sheet opened above it.
+- The instant the picture is handed over to AirDrop that happens. The transfer itself keeps running
+  in the system: the file still arrives on the Mac although the app already shows the chat. iOS never
+  reports an AirDrop delivery to the app (`completionWithItemsHandler` stays silent, measured on
+  device), so the hand-over event of the activity item source is what closes the windows — no timer,
+  no time window.
+- Activities that keep their own picker inside the app („In Dateien sichern", Mail, Notes, printing)
+  must not be torn down while you are still choosing, so they close the sheet as soon as the system
+  reports that activity back.
+- Share extensions that switch to another app first — WhatsApp and friends — leave the sheet
+  standing behind them, so that one closes the moment the app is back in the foreground, and only if
+  a file was handed over before. Pulling down the notification centre mid-choice therefore keeps the
+  sheet open.
+- A sheet the system already tore down is never dismissed twice, and one share never closes twice.
 
 ### Histories and storage
 - The header's list button opens "Verläufe": every conversation with its date, message

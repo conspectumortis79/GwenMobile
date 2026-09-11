@@ -221,7 +221,7 @@ extension ChatView {
         let bytes = (try? Data(contentsOf: url))?.count ?? -1
         report.add("AIRDROP_DATEI", "name=\(url.lastPathComponent) endung=\(url.pathExtension) bytes=\(bytes)")
         do {
-            try Presenter.share(url: url, closesOn: [.airDrop])
+            try Presenter.share(url: url)
         } catch { report.addFailure("AIRDROP_FENSTER", error) }
         var gefunden: UIActivityViewController?
         for _ in 0..<50 {

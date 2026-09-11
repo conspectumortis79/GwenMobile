@@ -205,7 +205,7 @@ struct Bubble: View, Equatable {
             return
         }
         do {
-            try Presenter.share(url: url, closesOn: [.airDrop])
+            try Presenter.share(url: url)
         } catch {
             shareFailure = error.localizedDescription
         }
