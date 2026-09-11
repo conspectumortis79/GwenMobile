@@ -1,0 +1,647 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		087ECFAF7D87DF1543140620 /* StorageUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4038A95F76F1C216525D10 /* StorageUsage.swift */; };
+		0A99BE83D715A5212B671B1B /* StreamThrottleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4517B39D2DA20FF51F7B5A4E /* StreamThrottleTests.swift */; };
+		0CFE9D883933524A5EB54CB4 /* WAVCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2998A608A6B454B7039E39 /* WAVCodecTests.swift */; };
+		0E5C22474418C00BFD7668AF /* DebugFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D50C9CEE0B920C6F5219845 /* DebugFlowTests.swift */; };
+		19F7DEC490D7611636F633C4 /* SystemPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E1B631FF83274A2BAC3EAC4 /* SystemPrompt.swift */; };
+		1D5146FFBBC9FB734243ADD1 /* AnswerError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B4ABEDC9CB61EE0D3AC21 /* AnswerError.swift */; };
+		27049FFD91EC60CC9AC85F84 /* SystemPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC62B1DD6F8C5335DBC98914 /* SystemPromptTests.swift */; };
+		2887B9BB59B2B6B242FB91A4 /* GwenMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F8D35447512097A7A6329DD /* GwenMobileApp.swift */; };
+		2A48BE12FC0D4FA84BFC0338 /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C624A9D2BB79A65ECD118A0A /* RealtimeClient.swift */; };
+		30F8A34300C813A43C157CBD /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE3F063E06C313BC2E176E62 /* L10n.swift */; };
+		34D9A1E618C94827989B0ED2 /* CameraPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 270F477AC1CF86ABB1F5C375 /* CameraPresenter.swift */; };
+		3C302BFBF7BBB0E2EB26E740 /* SpeechSynthesizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26A251442708D3DF484C47F /* SpeechSynthesizer.swift */; };
+		401CF7474F5CEC776A42ADB2 /* RatioStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9E745269CBF0FB25E6731C1 /* RatioStore.swift */; };
+		444B91184F8A81D6C3B8A8F0 /* HTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55E59A0B8C96A584C02462FA /* HTTP.swift */; };
+		469A807F9456930643A6FC3F /* UndoBarHostTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F155EC217D110B3F3C0FD43 /* UndoBarHostTests.swift */; };
+		4716818C0A85F832DBD1F518 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92CCA7B22E673EC72E40E733 /* HistoryView.swift */; };
+		47398D8331EB6808BD012259 /* RequestBuildingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E76BA900513E7D50BAF877E /* RequestBuildingTests.swift */; };
+		48286D2CCE40064F4EEC569A /* APIErrorParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E99C97E1CA0486DB1D6D294 /* APIErrorParserTests.swift */; };
+		4BC26C14C6614AB730058530 /* HistoryCleanerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE952B9C0D6B31F62640B5B /* HistoryCleanerTests.swift */; };
+		5856F4385D9902CF57E8D67A /* WAVCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052389F9C1DDDC724794A144 /* WAVCodec.swift */; };
+		5AA8E73415E6A637CFE8FD43 /* Bubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089BC76D609665E27CBC7DC1 /* Bubble.swift */; };
+		5FD429C1BB22B587E82E21D0 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F8105DD5A3827046E43EF23 /* SettingsView.swift */; };
+		67DEA5FFE1DEDFFDC6E12B92 /* ModelFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E08FF257303AA4B9C3AB6E8B /* ModelFilterTests.swift */; };
+		6A469E31EE3B5AB4B2D7549D /* VoiceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2565E25857474CC58E1991 /* VoiceTranscriber.swift */; };
+		737A67D2F1AFE983CEFEA500 /* ImageFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7486036C22301522531F6E2A /* ImageFeed.swift */; };
+		784DEB053D973191B37B286F /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D2BEB898C52C42DCD42839 /* APIError.swift */; };
+		7C9B438ABAAABADE97E3DA39 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8A3F6A3BD2249D02B203E0F0 /* Assets.xcassets */; };
+		83D500F25448767D5807F18F /* ChatBubbles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72D93E76E44ECD656357458 /* ChatBubbles.swift */; };
+		88F317E1FD375B534703A365 /* ChatRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51EA00E69358500C8D73DB27 /* ChatRunner.swift */; };
+		9100D965DEFC09EBFF911759 /* IntentHeuristics.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA4C4B955DF23F1A2A69D5C /* IntentHeuristics.swift */; };
+		9604BFC3404EAB5E85173CA5 /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDCB53F816AD72AB27BC0BF4 /* StorageTests.swift */; };
+		A7BAA2C7E18560269ED93F83 /* AnswerErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D85DFDA39B9A8282E193770 /* AnswerErrorTests.swift */; };
+		A9BC3B4FF34AD306BB49C4E8 /* ChatStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADB8E2EC6319FF4173AC9234 /* ChatStore.swift */; };
+		A9E6CB5F64DA4B2D02A7C4BD /* CalendarAuthorizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECA64393C8BD2DFBE57235A0 /* CalendarAuthorizationTests.swift */; };
+		AB14D0C423A1B0A1E605E402 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A72E0573A2F6F4996E7CDF11 /* ChatView.swift */; };
+		AF6DDAC9CF2C69F8E4A6A95B /* Flag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A297A51FD755F484CF4EF62 /* Flag.swift */; };
+		B4E600BCF07641BD03C860BC /* PerfMonitoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 673C379E9F2E2A39692BF3C3 /* PerfMonitoring.swift */; };
+		B6363BBBD307D1A4E4900DB6 /* CalendarKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FB8DA772DC048E33BE964A /* CalendarKit.swift */; };
+		B6EA81C47137497A80870EE4 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE58309DD21F20B163C2434 /* Settings.swift */; };
+		B880113A0A161ED301CBBDA7 /* ChatResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03854A980E5863E4413BF506 /* ChatResponse.swift */; };
+		BC2E76669B13C2E6BCA36A1A /* QwenAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FFB9D8E673D0DF55284898 /* QwenAPI.swift */; };
+		BF67FD489E4231CD1D805E73 /* HTTPTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD3A451CC17431D7E40C3527 /* HTTPTransportTests.swift */; };
+		C0738CBBFA40E347C2145DFC /* UndoBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710C9082A5C93B6F4B77A474 /* UndoBar.swift */; };
+		CA539A27125961338D5BB704 /* StoragePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149775607E2842B7A37A3DE6 /* StoragePaths.swift */; };
+		CC1FD5FED96DCFFE5397E101 /* MediaStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F58030CA63D9F5D3B6D732E0 /* MediaStore.swift */; };
+		CE3204521E67734D0FF87D5C /* HistoryCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E1E00464A7C29B48F3A54F1 /* HistoryCleaner.swift */; };
+		D19F2F3C2E073C77858CD9D7 /* AttachmentImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0CDE44D098C35E2386D200 /* AttachmentImage.swift */; };
+		D2C15045B7164DF9AC6D6DEC /* SendRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566DC4EE62F487B92EC6260A /* SendRouter.swift */; };
+		D5F6A954320639BB55A57881 /* ModelFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FAB0CCD15AA534E1297706C /* ModelFilter.swift */; };
+		D60B4FFD6D35B7A0D3C28F3A /* DebugSweep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39309C52D51D22AA62F0431B /* DebugSweep.swift */; };
+		D8EE405812A5A8818D8A9E79 /* StreamThrottle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5195B2A4B246225CD9044D65 /* StreamThrottle.swift */; };
+		D91F239DCD1C199D10F42B0C /* WebSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAAF22B5A89FE0F69D0B1B2C /* WebSearch.swift */; };
+		D9DF6A3DEC1FE4E9248AED18 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6315B4D8328F194CDBDE6A33 /* Models.swift */; };
+		DB5063DA30F1CF714ADED129 /* ChatStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD5D3EE2AA4841097D5EF81 /* ChatStoreTests.swift */; };
+		DE4E105D5DE34774DDEB3C18 /* LocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E49A9DC268248DDAE828145E /* LocalizationTests.swift */; };
+		DEECC1E1EA2220025049C4E4 /* APIErrorParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF9B52295BE745F829C3E33D /* APIErrorParser.swift */; };
+		E30C948F0CFAE09D1BF1D66A /* ChatResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 262A5AB0A6097ED145E8A809 /* ChatResponseTests.swift */; };
+		E7D78A8AE84EDDEDDDD515E1 /* IntentHeuristicsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D4A9A2567DC47F5C627985E /* IntentHeuristicsTests.swift */; };
+		F9E7DE77A06E1A288DB42400 /* ImagePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A88E6380FD21FA2B07D842 /* ImagePolicy.swift */; };
+		FC1A9D03465EF43267BD2F06 /* SendRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E080E9ABAB6E928A04F739DE /* SendRouterTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		63AE6A0CCAC865F461D4F739 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BA82DEA0B110B810B1A5ABB3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B058D9E107D6D04A43FC4A77;
+			remoteInfo = GwenMobile;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		03854A980E5863E4413BF506 /* ChatResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatResponse.swift; sourceTree = "<group>"; };
+		052389F9C1DDDC724794A144 /* WAVCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WAVCodec.swift; sourceTree = "<group>"; };
+		089BC76D609665E27CBC7DC1 /* Bubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bubble.swift; sourceTree = "<group>"; };
+		0A297A51FD755F484CF4EF62 /* Flag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Flag.swift; sourceTree = "<group>"; };
+		0F8D35447512097A7A6329DD /* GwenMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GwenMobileApp.swift; sourceTree = "<group>"; };
+		149775607E2842B7A37A3DE6 /* StoragePaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoragePaths.swift; sourceTree = "<group>"; };
+		15E1E0C9F912F8A2DE0EBD55 /* GwenMobileTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GwenMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1D4A9A2567DC47F5C627985E /* IntentHeuristicsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentHeuristicsTests.swift; sourceTree = "<group>"; };
+		262A5AB0A6097ED145E8A809 /* ChatResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatResponseTests.swift; sourceTree = "<group>"; };
+		270F477AC1CF86ABB1F5C375 /* CameraPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPresenter.swift; sourceTree = "<group>"; };
+		2E1B631FF83274A2BAC3EAC4 /* SystemPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPrompt.swift; sourceTree = "<group>"; };
+		39309C52D51D22AA62F0431B /* DebugSweep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSweep.swift; sourceTree = "<group>"; };
+		4517B39D2DA20FF51F7B5A4E /* StreamThrottleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamThrottleTests.swift; sourceTree = "<group>"; };
+		49A88E6380FD21FA2B07D842 /* ImagePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePolicy.swift; sourceTree = "<group>"; };
+		4D85DFDA39B9A8282E193770 /* AnswerErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnswerErrorTests.swift; sourceTree = "<group>"; };
+		5195B2A4B246225CD9044D65 /* StreamThrottle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamThrottle.swift; sourceTree = "<group>"; };
+		51EA00E69358500C8D73DB27 /* ChatRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRunner.swift; sourceTree = "<group>"; };
+		549B4ABEDC9CB61EE0D3AC21 /* AnswerError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnswerError.swift; sourceTree = "<group>"; };
+		55E59A0B8C96A584C02462FA /* HTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTP.swift; sourceTree = "<group>"; };
+		566DC4EE62F487B92EC6260A /* SendRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendRouter.swift; sourceTree = "<group>"; };
+		6315B4D8328F194CDBDE6A33 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		673C379E9F2E2A39692BF3C3 /* PerfMonitoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerfMonitoring.swift; sourceTree = "<group>"; };
+		6B2998A608A6B454B7039E39 /* WAVCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WAVCodecTests.swift; sourceTree = "<group>"; };
+		6CE58309DD21F20B163C2434 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		710C9082A5C93B6F4B77A474 /* UndoBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoBar.swift; sourceTree = "<group>"; };
+		7486036C22301522531F6E2A /* ImageFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageFeed.swift; sourceTree = "<group>"; };
+		74FFB9D8E673D0DF55284898 /* QwenAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QwenAPI.swift; sourceTree = "<group>"; };
+		7F155EC217D110B3F3C0FD43 /* UndoBarHostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoBarHostTests.swift; sourceTree = "<group>"; };
+		7F8105DD5A3827046E43EF23 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		7FAB0CCD15AA534E1297706C /* ModelFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelFilter.swift; sourceTree = "<group>"; };
+		8A3F6A3BD2249D02B203E0F0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8D50C9CEE0B920C6F5219845 /* DebugFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugFlowTests.swift; sourceTree = "<group>"; };
+		92CCA7B22E673EC72E40E733 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		9E1E00464A7C29B48F3A54F1 /* HistoryCleaner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCleaner.swift; sourceTree = "<group>"; };
+		9E76BA900513E7D50BAF877E /* RequestBuildingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuildingTests.swift; sourceTree = "<group>"; };
+		9E99C97E1CA0486DB1D6D294 /* APIErrorParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIErrorParserTests.swift; sourceTree = "<group>"; };
+		A26A251442708D3DF484C47F /* SpeechSynthesizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechSynthesizer.swift; sourceTree = "<group>"; };
+		A72E0573A2F6F4996E7CDF11 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		AD3A451CC17431D7E40C3527 /* HTTPTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPTransportTests.swift; sourceTree = "<group>"; };
+		ADB8E2EC6319FF4173AC9234 /* ChatStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatStore.swift; sourceTree = "<group>"; };
+		ADD5D3EE2AA4841097D5EF81 /* ChatStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatStoreTests.swift; sourceTree = "<group>"; };
+		AE0007C2B21A1A84AED91548 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B72D93E76E44ECD656357458 /* ChatBubbles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBubbles.swift; sourceTree = "<group>"; };
+		BF9B52295BE745F829C3E33D /* APIErrorParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIErrorParser.swift; sourceTree = "<group>"; };
+		C3D2BEB898C52C42DCD42839 /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
+		C4FB8DA772DC048E33BE964A /* CalendarKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarKit.swift; sourceTree = "<group>"; };
+		C624A9D2BB79A65ECD118A0A /* RealtimeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeClient.swift; sourceTree = "<group>"; };
+		CB2565E25857474CC58E1991 /* VoiceTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceTranscriber.swift; sourceTree = "<group>"; };
+		CC4038A95F76F1C216525D10 /* StorageUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageUsage.swift; sourceTree = "<group>"; };
+		CE3F063E06C313BC2E176E62 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		CEA4C4B955DF23F1A2A69D5C /* IntentHeuristics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentHeuristics.swift; sourceTree = "<group>"; };
+		CEE952B9C0D6B31F62640B5B /* HistoryCleanerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCleanerTests.swift; sourceTree = "<group>"; };
+		DAAF22B5A89FE0F69D0B1B2C /* WebSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearch.swift; sourceTree = "<group>"; };
+		E080E9ABAB6E928A04F739DE /* SendRouterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendRouterTests.swift; sourceTree = "<group>"; };
+		E08FF257303AA4B9C3AB6E8B /* ModelFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelFilterTests.swift; sourceTree = "<group>"; };
+		E49A9DC268248DDAE828145E /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
+		E59E251FED9CD3E6C962A328 /* GwenMobile.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GwenMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ECA64393C8BD2DFBE57235A0 /* CalendarAuthorizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarAuthorizationTests.swift; sourceTree = "<group>"; };
+		EE0CDE44D098C35E2386D200 /* AttachmentImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentImage.swift; sourceTree = "<group>"; };
+		F58030CA63D9F5D3B6D732E0 /* MediaStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaStore.swift; sourceTree = "<group>"; };
+		F9E745269CBF0FB25E6731C1 /* RatioStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatioStore.swift; sourceTree = "<group>"; };
+		FC62B1DD6F8C5335DBC98914 /* SystemPromptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPromptTests.swift; sourceTree = "<group>"; };
+		FDCB53F816AD72AB27BC0BF4 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		3195FC0A5F752A92C9DB43C0 /* GwenMobileTests */ = {
+			isa = PBXGroup;
+			children = (
+				4D85DFDA39B9A8282E193770 /* AnswerErrorTests.swift */,
+				9E99C97E1CA0486DB1D6D294 /* APIErrorParserTests.swift */,
+				ECA64393C8BD2DFBE57235A0 /* CalendarAuthorizationTests.swift */,
+				262A5AB0A6097ED145E8A809 /* ChatResponseTests.swift */,
+				ADD5D3EE2AA4841097D5EF81 /* ChatStoreTests.swift */,
+				CEE952B9C0D6B31F62640B5B /* HistoryCleanerTests.swift */,
+				AD3A451CC17431D7E40C3527 /* HTTPTransportTests.swift */,
+				1D4A9A2567DC47F5C627985E /* IntentHeuristicsTests.swift */,
+				E49A9DC268248DDAE828145E /* LocalizationTests.swift */,
+				E08FF257303AA4B9C3AB6E8B /* ModelFilterTests.swift */,
+				9E76BA900513E7D50BAF877E /* RequestBuildingTests.swift */,
+				E080E9ABAB6E928A04F739DE /* SendRouterTests.swift */,
+				FDCB53F816AD72AB27BC0BF4 /* StorageTests.swift */,
+				4517B39D2DA20FF51F7B5A4E /* StreamThrottleTests.swift */,
+				FC62B1DD6F8C5335DBC98914 /* SystemPromptTests.swift */,
+				7F155EC217D110B3F3C0FD43 /* UndoBarHostTests.swift */,
+				6B2998A608A6B454B7039E39 /* WAVCodecTests.swift */,
+			);
+			path = GwenMobileTests;
+			sourceTree = "<group>";
+		};
+		323B81FE61BCE3B6592EE94B /* GwenMobile */ = {
+			isa = PBXGroup;
+			children = (
+				549B4ABEDC9CB61EE0D3AC21 /* AnswerError.swift */,
+				C3D2BEB898C52C42DCD42839 /* APIError.swift */,
+				BF9B52295BE745F829C3E33D /* APIErrorParser.swift */,
+				8A3F6A3BD2249D02B203E0F0 /* Assets.xcassets */,
+				EE0CDE44D098C35E2386D200 /* AttachmentImage.swift */,
+				089BC76D609665E27CBC7DC1 /* Bubble.swift */,
+				C4FB8DA772DC048E33BE964A /* CalendarKit.swift */,
+				270F477AC1CF86ABB1F5C375 /* CameraPresenter.swift */,
+				B72D93E76E44ECD656357458 /* ChatBubbles.swift */,
+				03854A980E5863E4413BF506 /* ChatResponse.swift */,
+				51EA00E69358500C8D73DB27 /* ChatRunner.swift */,
+				ADB8E2EC6319FF4173AC9234 /* ChatStore.swift */,
+				A72E0573A2F6F4996E7CDF11 /* ChatView.swift */,
+				8D50C9CEE0B920C6F5219845 /* DebugFlowTests.swift */,
+				39309C52D51D22AA62F0431B /* DebugSweep.swift */,
+				0A297A51FD755F484CF4EF62 /* Flag.swift */,
+				0F8D35447512097A7A6329DD /* GwenMobileApp.swift */,
+				9E1E00464A7C29B48F3A54F1 /* HistoryCleaner.swift */,
+				92CCA7B22E673EC72E40E733 /* HistoryView.swift */,
+				55E59A0B8C96A584C02462FA /* HTTP.swift */,
+				7486036C22301522531F6E2A /* ImageFeed.swift */,
+				49A88E6380FD21FA2B07D842 /* ImagePolicy.swift */,
+				AE0007C2B21A1A84AED91548 /* Info.plist */,
+				CEA4C4B955DF23F1A2A69D5C /* IntentHeuristics.swift */,
+				CE3F063E06C313BC2E176E62 /* L10n.swift */,
+				F58030CA63D9F5D3B6D732E0 /* MediaStore.swift */,
+				7FAB0CCD15AA534E1297706C /* ModelFilter.swift */,
+				6315B4D8328F194CDBDE6A33 /* Models.swift */,
+				673C379E9F2E2A39692BF3C3 /* PerfMonitoring.swift */,
+				74FFB9D8E673D0DF55284898 /* QwenAPI.swift */,
+				F9E745269CBF0FB25E6731C1 /* RatioStore.swift */,
+				C624A9D2BB79A65ECD118A0A /* RealtimeClient.swift */,
+				566DC4EE62F487B92EC6260A /* SendRouter.swift */,
+				6CE58309DD21F20B163C2434 /* Settings.swift */,
+				7F8105DD5A3827046E43EF23 /* SettingsView.swift */,
+				A26A251442708D3DF484C47F /* SpeechSynthesizer.swift */,
+				149775607E2842B7A37A3DE6 /* StoragePaths.swift */,
+				CC4038A95F76F1C216525D10 /* StorageUsage.swift */,
+				5195B2A4B246225CD9044D65 /* StreamThrottle.swift */,
+				2E1B631FF83274A2BAC3EAC4 /* SystemPrompt.swift */,
+				710C9082A5C93B6F4B77A474 /* UndoBar.swift */,
+				CB2565E25857474CC58E1991 /* VoiceTranscriber.swift */,
+				052389F9C1DDDC724794A144 /* WAVCodec.swift */,
+				DAAF22B5A89FE0F69D0B1B2C /* WebSearch.swift */,
+			);
+			path = GwenMobile;
+			sourceTree = "<group>";
+		};
+		A2124AFD7163F6D5A2ED2CA2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E59E251FED9CD3E6C962A328 /* GwenMobile.app */,
+				15E1E0C9F912F8A2DE0EBD55 /* GwenMobileTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DD0C0E71416542C3A2608BB4 = {
+			isa = PBXGroup;
+			children = (
+				323B81FE61BCE3B6592EE94B /* GwenMobile */,
+				3195FC0A5F752A92C9DB43C0 /* GwenMobileTests */,
+				A2124AFD7163F6D5A2ED2CA2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		611EF4360E1C2F54AE9F93C2 /* GwenMobileTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6CF0D3C6216BF38C4AF6F7D1 /* Build configuration list for PBXNativeTarget "GwenMobileTests" */;
+			buildPhases = (
+				D34300788A9FC7CF15A328B1 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B7D5EA20546D056CE11FD292 /* PBXTargetDependency */,
+			);
+			name = GwenMobileTests;
+			packageProductDependencies = (
+			);
+			productName = GwenMobileTests;
+			productReference = 15E1E0C9F912F8A2DE0EBD55 /* GwenMobileTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B058D9E107D6D04A43FC4A77 /* GwenMobile */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 10EB1BDCB7F7129B662CB2E9 /* Build configuration list for PBXNativeTarget "GwenMobile" */;
+			buildPhases = (
+				F1E930C821FCAF281A5B8123 /* Sources */,
+				5E09A995E811F7A4B6207C59 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GwenMobile;
+			packageProductDependencies = (
+			);
+			productName = GwenMobile;
+			productReference = E59E251FED9CD3E6C962A328 /* GwenMobile.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BA82DEA0B110B810B1A5ABB3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					611EF4360E1C2F54AE9F93C2 = {
+						DevelopmentTeam = HDR2ZP983J;
+					};
+					B058D9E107D6D04A43FC4A77 = {
+						DevelopmentTeam = HDR2ZP983J;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = A1A89EE727B27C7DA181CF20 /* Build configuration list for PBXProject "GwenMobile" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = DD0C0E71416542C3A2608BB4;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A2124AFD7163F6D5A2ED2CA2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B058D9E107D6D04A43FC4A77 /* GwenMobile */,
+				611EF4360E1C2F54AE9F93C2 /* GwenMobileTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5E09A995E811F7A4B6207C59 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7C9B438ABAAABADE97E3DA39 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D34300788A9FC7CF15A328B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				48286D2CCE40064F4EEC569A /* APIErrorParserTests.swift in Sources */,
+				A7BAA2C7E18560269ED93F83 /* AnswerErrorTests.swift in Sources */,
+				A9E6CB5F64DA4B2D02A7C4BD /* CalendarAuthorizationTests.swift in Sources */,
+				E30C948F0CFAE09D1BF1D66A /* ChatResponseTests.swift in Sources */,
+				DB5063DA30F1CF714ADED129 /* ChatStoreTests.swift in Sources */,
+				BF67FD489E4231CD1D805E73 /* HTTPTransportTests.swift in Sources */,
+				4BC26C14C6614AB730058530 /* HistoryCleanerTests.swift in Sources */,
+				E7D78A8AE84EDDEDDDD515E1 /* IntentHeuristicsTests.swift in Sources */,
+				DE4E105D5DE34774DDEB3C18 /* LocalizationTests.swift in Sources */,
+				67DEA5FFE1DEDFFDC6E12B92 /* ModelFilterTests.swift in Sources */,
+				47398D8331EB6808BD012259 /* RequestBuildingTests.swift in Sources */,
+				FC1A9D03465EF43267BD2F06 /* SendRouterTests.swift in Sources */,
+				9604BFC3404EAB5E85173CA5 /* StorageTests.swift in Sources */,
+				0A99BE83D715A5212B671B1B /* StreamThrottleTests.swift in Sources */,
+				27049FFD91EC60CC9AC85F84 /* SystemPromptTests.swift in Sources */,
+				469A807F9456930643A6FC3F /* UndoBarHostTests.swift in Sources */,
+				0CFE9D883933524A5EB54CB4 /* WAVCodecTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1E930C821FCAF281A5B8123 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				784DEB053D973191B37B286F /* APIError.swift in Sources */,
+				DEECC1E1EA2220025049C4E4 /* APIErrorParser.swift in Sources */,
+				1D5146FFBBC9FB734243ADD1 /* AnswerError.swift in Sources */,
+				D19F2F3C2E073C77858CD9D7 /* AttachmentImage.swift in Sources */,
+				5AA8E73415E6A637CFE8FD43 /* Bubble.swift in Sources */,
+				B6363BBBD307D1A4E4900DB6 /* CalendarKit.swift in Sources */,
+				34D9A1E618C94827989B0ED2 /* CameraPresenter.swift in Sources */,
+				83D500F25448767D5807F18F /* ChatBubbles.swift in Sources */,
+				B880113A0A161ED301CBBDA7 /* ChatResponse.swift in Sources */,
+				88F317E1FD375B534703A365 /* ChatRunner.swift in Sources */,
+				A9BC3B4FF34AD306BB49C4E8 /* ChatStore.swift in Sources */,
+				AB14D0C423A1B0A1E605E402 /* ChatView.swift in Sources */,
+				0E5C22474418C00BFD7668AF /* DebugFlowTests.swift in Sources */,
+				D60B4FFD6D35B7A0D3C28F3A /* DebugSweep.swift in Sources */,
+				AF6DDAC9CF2C69F8E4A6A95B /* Flag.swift in Sources */,
+				2887B9BB59B2B6B242FB91A4 /* GwenMobileApp.swift in Sources */,
+				444B91184F8A81D6C3B8A8F0 /* HTTP.swift in Sources */,
+				CE3204521E67734D0FF87D5C /* HistoryCleaner.swift in Sources */,
+				4716818C0A85F832DBD1F518 /* HistoryView.swift in Sources */,
+				737A67D2F1AFE983CEFEA500 /* ImageFeed.swift in Sources */,
+				F9E7DE77A06E1A288DB42400 /* ImagePolicy.swift in Sources */,
+				9100D965DEFC09EBFF911759 /* IntentHeuristics.swift in Sources */,
+				30F8A34300C813A43C157CBD /* L10n.swift in Sources */,
+				CC1FD5FED96DCFFE5397E101 /* MediaStore.swift in Sources */,
+				D5F6A954320639BB55A57881 /* ModelFilter.swift in Sources */,
+				D9DF6A3DEC1FE4E9248AED18 /* Models.swift in Sources */,
+				B4E600BCF07641BD03C860BC /* PerfMonitoring.swift in Sources */,
+				BC2E76669B13C2E6BCA36A1A /* QwenAPI.swift in Sources */,
+				401CF7474F5CEC776A42ADB2 /* RatioStore.swift in Sources */,
+				2A48BE12FC0D4FA84BFC0338 /* RealtimeClient.swift in Sources */,
+				D2C15045B7164DF9AC6D6DEC /* SendRouter.swift in Sources */,
+				B6EA81C47137497A80870EE4 /* Settings.swift in Sources */,
+				5FD429C1BB22B587E82E21D0 /* SettingsView.swift in Sources */,
+				3C302BFBF7BBB0E2EB26E740 /* SpeechSynthesizer.swift in Sources */,
+				CA539A27125961338D5BB704 /* StoragePaths.swift in Sources */,
+				087ECFAF7D87DF1543140620 /* StorageUsage.swift in Sources */,
+				D8EE405812A5A8818D8A9E79 /* StreamThrottle.swift in Sources */,
+				19F7DEC490D7611636F633C4 /* SystemPrompt.swift in Sources */,
+				C0738CBBFA40E347C2145DFC /* UndoBar.swift in Sources */,
+				6A469E31EE3B5AB4B2D7549D /* VoiceTranscriber.swift in Sources */,
+				5856F4385D9902CF57E8D67A /* WAVCodec.swift in Sources */,
+				D91F239DCD1C199D10F42B0C /* WebSearch.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B7D5EA20546D056CE11FD292 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B058D9E107D6D04A43FC4A77 /* GwenMobile */;
+			targetProxy = 63AE6A0CCAC865F461D4F739 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0F3EE7024C7B07965F81747A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = HDR2ZP983J;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mortis.GwenMobileTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GwenMobile.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GwenMobile";
+			};
+			name = Debug;
+		};
+		3CBB0E1FCAAEB99485E97C5B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		58FF5CBEBD7EE470786FB2CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = HDR2ZP983J;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GwenMobile/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mortis.gwenmobile;
+				PRODUCT_NAME = GwenMobile;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		86F620524091D9C1FFF4F7BE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		89DDA67F00CF8ECD2149275D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = HDR2ZP983J;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mortis.GwenMobileTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GwenMobile.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GwenMobile";
+			};
+			name = Release;
+		};
+		E17002274D02E9165FF92AB6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = HDR2ZP983J;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = GwenMobile/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mortis.gwenmobile;
+				PRODUCT_NAME = GwenMobile;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		10EB1BDCB7F7129B662CB2E9 /* Build configuration list for PBXNativeTarget "GwenMobile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				58FF5CBEBD7EE470786FB2CC /* Debug */,
+				E17002274D02E9165FF92AB6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6CF0D3C6216BF38C4AF6F7D1 /* Build configuration list for PBXNativeTarget "GwenMobileTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0F3EE7024C7B07965F81747A /* Debug */,
+				89DDA67F00CF8ECD2149275D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A1A89EE727B27C7DA181CF20 /* Build configuration list for PBXProject "GwenMobile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				86F620524091D9C1FFF4F7BE /* Debug */,
+				3CBB0E1FCAAEB99485E97C5B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BA82DEA0B110B810B1A5ABB3 /* Project object */;
+}
