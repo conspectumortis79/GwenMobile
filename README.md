@@ -115,6 +115,11 @@ Swift 6, strict concurrency, iOS 17+.
   its data source
 - Follow-up edits: right after an image answer, just say "make it darker" —
   the previous result is picked up as the input image, no re-attaching
+- **Tap any picture** — attached or generated — and the full-screen viewer opens it: pinch to zoom,
+  double-tap to jump straight to the detail (double-tap again to fit), drag to pan while zoomed, and
+  page through the other pictures of that message with the arrows at the bottom. The viewer decodes
+  the stored JPEG itself (up to 2000 px), so zooming reveals real detail instead of the bubble
+  thumbnail, and closing the viewer leaves the chat exactly where it was
 - Long-press any generated image → "Edit" to send it back into the input bar
 - Save results to the Photos app (button or context menu)
 
@@ -223,7 +228,11 @@ the mic button in the app.
 
 ### Settings
 - Endpoint picker (Token Plan, DashScope intl/US/CN, EU workspace) + custom base URL
-- Model pickers (chat, vision, image, audio) populated from your account (GET /models)
+- Model pickers (chat, vision, image, audio) populated from your account (GET /models) — the
+  **vision** picker lists only the models whose image input the provider really confirms
+  (see *Vision models that actually see*)
+- **Thinking depth** for the chat model — the levels your provider actually confirms for that
+  model, so an answer can arrive in seconds instead of minutes (see *Thinking depth*)
 - Language, read-aloud toggle, connection test
 
 <img src="docs/screenshots/03-settings.png" alt="Settings sheet: language picker, Qwen Cloud API key field, endpoint picker with base URL and the model pickers" width="270">
@@ -251,11 +260,65 @@ open GwenMobile.xcodeproj
 The `GwenMobileTests` target holds the unit tests (pure logic: audio codec, intent
 heuristics, routing, request building, response decoding, error translation,
 localisation, storage, conversation store, conversation memory, routing context, stream throttling, answer export, the
-waiting-indicator rhythm). No network, no device.
+waiting-indicator rhythm, the share presentation closer, thinking levels and the provider level probe,
+the picture viewer (preview target, zoom geometry, page loading)).
+No network, no device.
 ```
 xcodegen generate
 xcodebuild test -scheme GwenMobile -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
+
+### Vision models that actually see
+- Long-pressing the vision picker used to offer every text model of the account, and that is wrong:
+  `deepseek-v4-pro`, `deepseek-v4-flash-0731` and `glm-5.2` **accept** an image part without complaining
+  and simply never look at it. Measured with a 24×24 px solid-colour PNG and the question „Nenne die
+  Farbe des Bildes mit genau einem Wort“: green picture → „Schwarz“ (glm-5.2), „Türkis“
+  (deepseek-v4-pro), „Weiß“ (deepseek-v4-flash-0731) — and the same answer or a shrug for the magenta
+  picture. Their `usage.prompt_tokens` doesn't even grow when the picture is attached (18 vs 19,
+  17 vs 10), i.e. zero image tokens were taken in. `qwen3.7-max` is stricter and refuses the request:
+  400 „The provided messages input is invalid. The error info is [Unexpected item type in content.]“.
+- The detection therefore asks the provider instead of reading model names: one tiny request per text
+  model with that picture attached, and the answer's `usage.prompt_tokens_details.image_tokens` decides.
+  Measured on the account: **qwen3.8-flash, qwen3.8-max, qwen3.7-plus and qwen3.6-flash report 66 image
+  tokens and name the colour correctly („Grün“, „Magenta“)** → `supported`; the blind ones report no
+  `image_tokens` → `rejected`; `qwen3.7-max` answers 400 → `rejected`; a 500, a timeout or a missing
+  answer stays `unknown` and hides nothing (a broken network must not remove working models from the list).
+- Consequences in the UI: the vision picker offers only `supported` models, the section footer states
+  how many of the account's models see pictures, and if the stored vision model turns out to be blind it
+  is repaired to the first working one while the list is being probed. A model that was never probed is
+  never hidden — until the first probe the picker still shows the whole text list.
+
+### Thinking depth
+- Every Qwen chat model on the account endpoint reasons before it answers, and it does so **without any
+  limit** unless the app says otherwise: the same arithmetic task ran **355 s / 61 556 characters** of
+  reasoning when nothing was sent, and **11,9 s** with the thinking switched off. Settings →
+  **Denktiefe / Thinking depth** is the dial for that.
+- The app does not guess which levels exist. `GET /models` answers with `id`, `created`, `object` and
+  `owned_by` only — no capability field, and there is no model-detail endpoint — so the levels are
+  **probed** while the model list loads: a request with an impossible `reasoning_effort` is rejected
+  before a single token is generated, and the rejection names the values that model accepts
+  (`'none', 'minimal', 'low', 'medium', 'high', 'xhigh'` — plus `'max'` on qwen3.8, glm-5.2 and
+  deepseek-v4, while deepseek-v4-pro has no `none`/`minimal` at all). A second token-free probe tries
+  `enable_thinking: false` and only marks a model switchable when the answer really comes without a
+  reasoning block.
+- The picker therefore shows exactly the levels of the selected chat model, always plus *Standard des
+  Modells* (send nothing). Until a model has been probed the list is limited to the four levels every
+  account model was measured to accept (`Sparsam`…`Sehr gründlich`), which keeps the setting useful on a
+  fresh install without risking a rejected request.
+- One choice, one key: the provider rejects `reasoning_effort` and `thinking_budget` in the same body
+  ("cannot be set simultaneously") and demands `reasoning_effort: none` whenever
+  `enable_thinking: false`, so the app builds the body from a single directive that can never emit two
+  thinking keys — covered by `ThinkingLevelTests.testNeverBothThinkingKeysInOneBody`.
+- Models that expose no thinking control at all (image generation, audio) simply keep *Standard des
+  Modells*; nothing is hidden and nothing is promised. Those models cannot be picked for vision either
+  (see *Vision models that actually see*).
+- Every internal helper request the app fires beside the answer — image-route classification, follow-up
+  rewriting, image-prompt composition, calendar planning, chart planning — runs with thinking off,
+  because each of them expects a single word or one JSON object (measured 1,6 s instead of 10,7 s on
+  qwen3.7-max). The chosen depth applies to the visible answer only.
+- The bubble signature under an answer shows the depth that produced it
+  (`qwen3.8-flash · 26,9 s · Ausgewogen`) and is stored with the message, so a re-read chat still tells
+  you how each answer was made. A *Standard des Modells* turn shows no depth at all.
 
 ### Debug-only feature sweep
 `sweep` runs every backend feature once against the real account and writes a report to
@@ -288,7 +351,14 @@ raw `**` survived — report in `Documents/export_probe.txt`) and `airdropprobe`
 path, then the presentation chain is polled until it is gone — `Documents/airdrop_probe.txt`
 reports every chain change and ends with `chatSichtbarWieder=true` once the AirDrop hand-over
 closes the sheet and the AirDrop window by itself),
-`menushow` (opens the "+" menu and leaves it open, for screenshots), `chartguard` (real conversation:
+`menushow` (opens the "+" menu and leaves it open, for screenshots), `viewerprobe` (opens the picture
+viewer for the largest stored chat picture, leaves it on screen and measures the real presentation —
+decoded edge in px, fit/min/max scales, the centring gap in pt, the scale after a double-tap and after
+the second one — into `Documents/viewer_probe.txt`, plus `viewer_probe_fit.jpg` and
+`viewer_probe_zoom.jpg` grabbed from the live window), `capsprobe` (probes every text
+model of the account the way the settings screen does — thinking levels, switchability and whether the
+model really takes in a picture — and writes one line per model plus the resulting vision list to
+`Documents/model_caps_probe.txt`), `chartguard` (real conversation:
 answer → "mach daraus ein diagramm" → then the three follow-ups "woher hast du die Statistik, die du in
 dem Diagramm eingetragen hast", "welche Werte hast du im Diagramm eingetragen" and the positive control
 "mach das diagramm bitte neu mit den werten von 2025" — passing is `bilder=0` for the two questions and

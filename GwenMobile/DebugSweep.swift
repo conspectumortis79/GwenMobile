@@ -200,6 +200,44 @@ extension ChatView {
         }.value
     }
 
+    func runCapabilityProbe() async {
+        UIApplication.shared.isIdleTimerDisabled = true
+        var report = SweepReport()
+        let loaded = settings.availableModels.isEmpty
+            ? (try? await QwenAPI.fetchModels(baseURL: settings.baseURL, key: settings.apiKey)) ?? []
+            : settings.availableModels
+        let textModels = ModelFilter.textCandidates(loaded)
+        report.add("SONDE_LISTE", "gesamt=\(loaded.count) text=\(textModels.count) chat=\(settings.chatModel) vision=\(settings.visionModel) gewaehlt=\(settings.chatThinkingLevel.rawValue)")
+        let caps = await QwenModelProber().discover(baseURL: settings.baseURL, key: settings.apiKey,
+                                                    models: textModels)
+        let stored = settings.modelCaps.merging(caps) { _, new in new }
+        for model in textModels {
+            let found = caps[model] ?? ModelCapabilities()
+            report.add("SONDE_\(model)",
+                       "stufen=\(found.thinking.levels.map { $0.rawValue }.joined(separator: ",")) "
+                           + "abschaltbar=\(found.thinking.canSwitchOff) "
+                           + "vision=\(found.vision.rawValue) "
+                           + "angebot=\(found.thinking.offeredLevels.map { $0.rawValue }.joined(separator: ",")) "
+                           + "richtung=\(Self.directiveSummary(found.thinking.directive(for: settings.chatThinkingLevel))) "
+                           + "aus=\(Self.directiveSummary(found.thinking.directive(for: .off)))")
+        }
+        report.add("SONDE_ERNET", "vollstaendig=\(caps.count) "
+                   + "visionJa=\(caps.filter { $0.value.vision == .supported }.count) "
+                   + "visionNein=\(caps.filter { $0.value.vision == .rejected }.count) "
+                   + "visionsListe=\(ModelFilter.visionCandidates(loaded, caps: stored).joined(separator: ","))")
+        report.write(into: "model_caps_probe.txt")
+        flowLog.info("CAPSPROBE bericht geschrieben")
+        UIApplication.shared.isIdleTimerDisabled = false
+    }
+
+    private static func directiveSummary(_ directive: ThinkingDirective) -> String {
+        switch directive {
+        case .nothing: return "nichts"
+        case .effort(let level): return "reasoning_effort=\(level.rawValue)"
+        case .suppressThinking: return "enable_thinking=false"
+        }
+    }
+
     func runAirDropProbe(seconds: Int = 900, graceSeconds: Int = 10) async {
         UIApplication.shared.isIdleTimerDisabled = true
         var report = SweepReport()

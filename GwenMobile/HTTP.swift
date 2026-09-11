@@ -1,5 +1,13 @@
 import Foundation
 
+struct ProbeResponse: Sendable {
+    let status: Int
+    let body: Data
+
+    var succeeded: Bool { status < 400 }
+    var rejectedByProvider: Bool { status >= 400 && status < 500 }
+}
+
 enum HTTP {
     static let session: URLSession = {
         let config = URLSessionConfiguration.default
@@ -75,5 +83,11 @@ enum HTTP {
         let (data, response) = try await data(req)
         try ensureAPISuccess(response, data: data)
         return data
+    }
+
+    static func probeResponse(_ req: URLRequest) async -> ProbeResponse? {
+        guard let (body, response) = try? await data(req),
+              let http = response as? HTTPURLResponse else { return nil }
+        return ProbeResponse(status: http.statusCode, body: body)
     }
 }

@@ -5,8 +5,9 @@ enum ChartPlanner {
     static let maxInputImages = 2
 
     static func makeRequest(baseURL: String, key: String, model: String,
-                            question: String, data: String, images: [Data] = []) throws -> URLRequest {
-        let body: [String: Any] = [
+                            question: String, data: String, images: [Data] = [],
+                            thinking: ThinkingDirective = .nothing) throws -> URLRequest {
+        var body: [String: Any] = [
             "model": model,
             "stream": false,
             "messages": [
@@ -14,6 +15,7 @@ enum ChartPlanner {
                 ["role": "user", "content": userContent(question: question, data: data, images: images)],
             ],
         ]
+        thinking.applied(to: &body)
         return try HTTP.jsonPOST(url: HTTP.chatCompletionsURL(baseURL), key: key, body: body,
                                 timeout: APITimeout.chatRequest)
     }
@@ -36,11 +38,13 @@ enum ChartPlanner {
     }
 
     static func plan(baseURL: String, key: String, model: String, question: String, data: String,
-                     images: [Data] = []) async throws -> ChartPlan? {
+                     images: [Data] = [],
+                     thinking: ThinkingDirective = .nothing) async throws -> ChartPlan? {
         let capped = data.count > maxDataChars ? String(data.prefix(maxDataChars)) : data
         let raw = try await Task.detached(priority: .userInitiated) { () throws -> String? in
             let req = try makeRequest(baseURL: baseURL, key: key, model: model,
-                                      question: question, data: capped, images: images)
+                                      question: question, data: capped, images: images,
+                                      thinking: thinking)
             return try await QwenAPI.askText(req)
         }.value
         return plan(from: raw)

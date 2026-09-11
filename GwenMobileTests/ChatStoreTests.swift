@@ -65,13 +65,26 @@ final class ChatStoreTests: XCTestCase {
         let image = Attachment(file: "img_test.jpg")
         let source = WebSource(title: "T", url: "https://t.example", domain: "t.example")
         store.appendAssistant("Antwort", model: "qwen3.8-flash", elapsed: 1.5, to: id,
-                              outImages: [image], sources: [source])
+                              outImages: [image], sources: [source], thinking: .medium)
         let message = try XCTUnwrap(store.current?.messages.last)
         XCTAssertEqual(message.text, "Antwort")
         XCTAssertEqual(message.model, "qwen3.8-flash")
         XCTAssertEqual(message.elapsed, 1.5)
         XCTAssertEqual(message.outImages, [image])
         XCTAssertEqual(message.sources, [source])
+        XCTAssertEqual(message.thinking, .medium)
+    }
+
+    func testThinkingLevelIsPersistedAndOldMessagesWithoutItStillLoad() async throws {
+        let (store, paths) = makeSandbox()
+        let id = try XCTUnwrap(store.current?.id)
+        store.appendAssistant("mit denktiefe", model: "qwen3.8-flash", elapsed: 2.5, to: id,
+                              thinking: .off)
+        store.appendAssistant("ohne denktiefe", model: "qwen3.8-flash", elapsed: 1.0, to: id)
+        try await Task.sleep(for: .milliseconds(700))
+        let reloaded = ChatStore(media: MediaStore(paths: paths), paths: paths)
+        let messages = try XCTUnwrap(reloaded.conversations.first?.messages)
+        XCTAssertEqual(messages.map(\.thinking), [.off, nil])
     }
 
     func testRemoveConversationReturnsIndexAndConversation() throws {

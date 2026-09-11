@@ -21,6 +21,7 @@ struct ChatView: View {
     @State private var alertError: L.FriendlyError?
     @State private var showSettings = false
     @State private var showHistory = false
+    @State var imagePreview: ImagePreviewTarget?
     @State private var imageWorking = false
     @State private var workingIsEdit = false
     @State private var workingLabelOverride: String? = nil
@@ -63,6 +64,9 @@ struct ChatView: View {
                 .environmentObject(store)
                 .environmentObject(store.cleaner)
         }
+        .fullScreenCover(item: $imagePreview) { target in
+            ImageViewerView(target: target, reader: store.media)
+        }
         .alert(L.t("error"), isPresented: Binding(
             get: { alertError != nil || voice.lastError != nil },
             set: { if !$0 { alertError = nil; voice.lastError = nil } }
@@ -103,6 +107,10 @@ struct ChatView: View {
         }
         .onAppear {
             store.cleaner.discardPendingDeletion()
+            if settings.isConfigured, !settings.modelsNeedingCaps.isEmpty {
+                let textModels = ModelFilter.textCandidates(settings.availableModels)
+                Task { await settings.refreshModelCaps(for: textModels) }
+            }
             CameraPresenter.shared.onImage = { img in
                 flowMark("CAMERA image size=\(Int(img.size.width))x\(Int(img.size.height))")
                 pendingImages = [(image: img, file: nil)]
@@ -226,6 +234,10 @@ struct ChatView: View {
                                        isLast: msg.id == lastID && !isStreaming,
                                        width: threadWidth,
                                        onEdit: { att in attachForEditing(att) },
+                                       onPreview: { att in
+                                           imagePreview = ImagePreviewTarget(tappedFile: att.file,
+                                                                             files: msg.imageFiles)
+                                       },
                                        onDelete: { id in store.cleaner.deleteMessage(id, in: conv.id) })
                                     .equatable()
                             }
@@ -615,7 +627,8 @@ struct ChatView: View {
         guard ImagePromptComposer.needsConversationContext(text, history: history) else { return text }
         let composed = try? await QwenAPI.composeImagePrompt(baseURL: settings.baseURL, key: settings.apiKey,
                                                              model: settings.chatModel,
-                                                             instruction: text, history: history)
+                                                             instruction: text, history: history,
+                                                             thinking: settings.thinkingOffDirective(for: settings.chatModel))
         guard let composed else { return text }
         flowMark("CTX bild frage=\(text.prefix(40))\u{2192} prompt=\(composed.prefix(90))")
         return composed
@@ -627,7 +640,8 @@ struct ChatView: View {
         let route = await QwenAPI.detectImageIntent(baseURL: settings.baseURL,
                                                     key: settings.apiKey,
                                                     model: settings.chatModel,
-                                                    instruction: text)
+                                                    instruction: text,
+                                                    thinking: settings.thinkingOffDirective(for: settings.chatModel))
         flowMark("ROUTE detect done \(String(describing: route)) ms=\(msOf(t0.duration(to: .now)))")
         return route
     }
@@ -676,7 +690,8 @@ struct ChatView: View {
                                                          model: chatModel, instruction: text,
                                                          history: prior,
                                                          events: CalendarService.upcomingContext(),
-                                                         calendars: CalendarService.calendarsContext()),
+                                                         calendars: CalendarService.calendarsContext(),
+                                                         thinking: settings.thinkingOffDirective(for: chatModel)),
                plan.action != .none {
                 let info = try await CalendarService.perform(plan)
                 store.appendAssistant(info, model: chatModel,
@@ -696,7 +711,8 @@ struct ChatView: View {
         }
         guard history.count > 1, FollowUpResolver.needsContext(raw) else { return raw }
         let rewritten = try? await QwenAPI.resolveQuery(baseURL: settings.baseURL, key: settings.apiKey,
-                                                       model: settings.chatModel, history: history)
+                                                       model: settings.chatModel, history: history,
+                                                       thinking: settings.thinkingOffDirective(for: settings.chatModel))
         let query = rewritten.map { FollowUpResolver.sanitize($0) }
         guard let query, FollowUpResolver.isUsable(query, insteadOf: raw) else {
             flowMark("CTX keep frage=\(raw.prefix(60))")
@@ -745,7 +761,8 @@ struct ChatView: View {
         do {
             guard let plan = try await ChartPlanner.plan(baseURL: settings.baseURL, key: settings.apiKey,
                                                          model: chatModel, question: question,
-                                                         data: digest, images: images) else {
+                                                         data: digest, images: images,
+                                                         thinking: settings.thinkingOffDirective(for: chatModel)) else {
                 throw APIError(message: L.t("chart_no_data"))
             }
             flowMark("CHART plan kind=\(plan.kind.rawValue) points=\(plan.points.count) web=\(hits.count) daten=\(digest.count) bilder=\(images.count)")
@@ -769,6 +786,8 @@ struct ChatView: View {
     @MainActor func streamChat(turn: ModelTurn, history: [ChatMessage],
                                convID: UUID, started: Date) async {
         let model = turn.needsVision ? settings.visionModel : settings.chatModel
+        let thinking = settings.thinkingDirective(for: model)
+        let usedLevel = settings.activeThinkingLevel(for: model)
         let messages = turn.messages
         let images = turn.images
         let baseURL = settings.baseURL
@@ -783,7 +802,8 @@ struct ChatView: View {
         do {
             let req = try await Task.detached(priority: .userInitiated, operation: { () throws -> URLRequest in
                 try QwenAPI.makeRequest(baseURL: baseURL, key: key, model: model,
-                                        messages: messages, imageData: images, stream: true)
+                                        messages: messages, imageData: images, stream: true,
+                                        thinking: thinking)
             }).value
             flowMark("CHAT send msgs=\(messages.count) bilder=\(images.count) model=\(model)")
             let full = try await ChatRunner.shared.run(req) { chunk in throttle.receive(chunk) }
@@ -804,7 +824,8 @@ struct ChatView: View {
             }
             if !full.isEmpty {
                 store.appendAssistant(full, model: model,
-                                      elapsed: Date().timeIntervalSince(started), to: convID)
+                                      elapsed: Date().timeIntervalSince(started), to: convID,
+                                      thinking: usedLevel)
                 maybeSpeak(full)
             }
         } catch let e as APIError {
@@ -812,7 +833,8 @@ struct ChatView: View {
             let fe = L.friendlyError(e.message, model: model, status: e.status)
             if let r = e.recoveredText, !r.isEmpty {
                 store.appendAssistant(r + "\n\n\u{26a0}\u{fe0f} \(fe.message)", model: model,
-                                      elapsed: Date().timeIntervalSince(started), to: convID)
+                                      elapsed: Date().timeIntervalSince(started), to: convID,
+                                      thinking: usedLevel)
             } else {
                 alertError = fe
             }

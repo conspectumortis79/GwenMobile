@@ -68,6 +68,9 @@ final class AppSettings: ObservableObject {
     }
     @Published var language: AppLanguage { didSet { d.set(language.rawValue, forKey: SettingsKey.language); L.apply(language) } }
     @Published var availableModels: [String] { didSet { d.set(availableModels, forKey: "availableModels") } }
+    @Published var chatThinkingLevel: ThinkingLevel { didSet { d.set(chatThinkingLevel.rawValue, forKey: "chatThinkingLevel") } }
+    @Published var modelCaps: [String: ModelCapabilities] { didSet { saveCaps() } }
+    private var probingCaps = false
 
     private init() {
         defaultBaseURL = AppSettings.knownEndpoints.first?.url ?? ""
@@ -82,6 +85,8 @@ final class AppSettings: ObservableObject {
         apiKey = Self.loadKey()
         language = L.lang
         availableModels = d.stringArray(forKey: "availableModels") ?? []
+        chatThinkingLevel = ThinkingLevel(rawValue: d.string(forKey: "chatThinkingLevel") ?? "") ?? .modelDefault
+        modelCaps = Self.decodeCaps(d.data(forKey: "modelCaps"))
         Self.importSeedFile()
         if baseURL.isEmpty { baseURL = defaultBaseURL }
         if chatModel.isEmpty { chatModel = defaultChatModel }
@@ -91,6 +96,59 @@ final class AppSettings: ObservableObject {
     }
 
     var isConfigured: Bool { !apiKey.isEmpty && !baseURL.isEmpty }
+
+    func capabilities(for model: String) -> ModelCapabilities {
+        modelCaps[model] ?? ModelCapabilities()
+    }
+
+    var visionCandidates: [String] {
+        ModelFilter.visionCandidates(availableModels, caps: modelCaps)
+    }
+
+    var hasVisionCaps: Bool {
+        ModelFilter.textCandidates(availableModels).contains { modelCaps[$0]?.vision.isKnown == true }
+    }
+
+    var modelsNeedingCaps: [String] {
+        ModelFilter.textCandidates(availableModels).filter { modelCaps[$0]?.isComplete != true }
+    }
+
+    func thinkingDirective(for model: String) -> ThinkingDirective {
+        capabilities(for: model).thinking.directive(for: chatThinkingLevel)
+    }
+
+    func thinkingOffDirective(for model: String) -> ThinkingDirective {
+        capabilities(for: model).thinking.directive(for: .off)
+    }
+
+    func activeThinkingLevel(for model: String) -> ThinkingLevel? {
+        thinkingDirective(for: model).sendsAnything ? chatThinkingLevel : nil
+    }
+
+    func refreshModelCaps(for models: [String],
+                          using discoverer: ModelDiscovering = QwenModelProber()) async {
+        let pending = models.filter { modelCaps[$0]?.isComplete != true }
+        guard isConfigured, !pending.isEmpty, !probingCaps else { return }
+        probingCaps = true
+        defer { probingCaps = false }
+        let found = await discoverer.discover(baseURL: baseURL, key: apiKey, models: pending)
+        guard !found.isEmpty else { return }
+        modelCaps = modelCaps.merging(found) { _, new in new }
+        if capabilities(for: visionModel).vision == .rejected, let first = visionCandidates.first {
+            visionModel = first
+        }
+    }
+
+    private func saveCaps() {
+        guard let data = try? JSONEncoder().encode(modelCaps) else { return }
+        d.set(data, forKey: "modelCaps")
+    }
+
+    private static func decodeCaps(_ data: Data?) -> [String: ModelCapabilities] {
+        guard let data, let decoded = try? JSONDecoder().decode([String: ModelCapabilities].self, from: data)
+        else { return [:] }
+        return decoded
+    }
 
     private static func importSeedFile() {
         guard loadKey().isEmpty else { return }

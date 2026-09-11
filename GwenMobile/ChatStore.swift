@@ -97,10 +97,11 @@ final class ChatStore: ObservableObject {
 
     func appendAssistant(_ text: String, model: String?, elapsed: Double?, to id: UUID,
                          outImages: [Attachment]? = nil,
-                         sources: [WebSource]? = nil) {
+                         sources: [WebSource]? = nil,
+                         thinking: ThinkingLevel? = nil) {
         appendMessage(ChatMessage(role: .assistant, text: text, model: model,
                                   elapsed: elapsed, outImages: outImages,
-                                  sources: sources), to: id)
+                                  sources: sources, thinking: thinking), to: id)
     }
 
     private func load() {

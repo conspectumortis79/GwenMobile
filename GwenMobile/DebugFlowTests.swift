@@ -37,6 +37,14 @@ extension ChatView {
             await runExportProbe()
             return
         }
+        if name == "capsprobe" {
+            await runCapabilityProbe()
+            return
+        }
+        if name == "viewerprobe" {
+            await runViewerProbe()
+            return
+        }
         if name == "airdropprobe" {
             await runAirDropProbe()
             return

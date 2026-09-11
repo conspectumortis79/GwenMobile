@@ -19,6 +19,7 @@ enum APITimeout {
     static let researchRequest: TimeInterval = 300
     static let imageRequest: TimeInterval = 300
     static let modelsRequest: TimeInterval = 30
+    static let probeRequest: TimeInterval = 20
     static let webPageRequest: TimeInterval = 20
     static let streamIdle: TimeInterval = 90
     static let streamResource: TimeInterval = 900

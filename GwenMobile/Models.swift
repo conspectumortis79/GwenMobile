@@ -25,6 +25,11 @@ struct ChatMessage: Identifiable, Codable, Hashable {
     var elapsed: Double? = nil
     var outImages: [Attachment]? = nil
     var sources: [WebSource]? = nil
+    var thinking: ThinkingLevel? = nil
+}
+
+extension ChatMessage {
+    var imageFiles: [String] { images.map(\.file) + (outImages ?? []).map(\.file) }
 }
 
 struct Conversation: Identifiable, Codable {

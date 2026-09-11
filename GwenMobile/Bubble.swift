@@ -26,9 +26,11 @@ struct Bubble: View, Equatable {
     var isLast: Bool = false
     var width: CGFloat = 360
     var onEdit: ((Attachment) -> Void)? = nil
+    var onPreview: ((Attachment) -> Void)? = nil
     var messageID: UUID?
     var onDelete: ((UUID) -> Void)? = nil
     var sources: [WebSource] = []
+    var thinking: ThinkingLevel? = nil
     let media: MediaStore?
     @State private var savedNote: String?
     @State private var shareFailure: String?
@@ -37,6 +39,7 @@ struct Bubble: View, Equatable {
          isLast: Bool = false,
          width: CGFloat = 360,
          onEdit: ((Attachment) -> Void)? = nil,
+         onPreview: ((Attachment) -> Void)? = nil,
          onDelete: ((UUID) -> Void)? = nil) {
         self.text = message.text
         self.isUser = message.role == .user
@@ -49,9 +52,11 @@ struct Bubble: View, Equatable {
         self.isLast = isLast
         self.width = width
         self.onEdit = onEdit
+        self.onPreview = onPreview
         self.messageID = message.id
         self.onDelete = onDelete
         self.sources = message.sources ?? []
+        self.thinking = message.thinking
         self.media = media
     }
 
@@ -70,6 +75,7 @@ struct Bubble: View, Equatable {
             && lhs.images == rhs.images && lhs.outImages == rhs.outImages
             && lhs.model == rhs.model && lhs.elapsed == rhs.elapsed && lhs.time == rhs.time
             && lhs.isLast == rhs.isLast && lhs.sources == rhs.sources
+            && lhs.thinking == rhs.thinking
             && lhs.messageID == rhs.messageID
             && lhs.width == rhs.width && lhs.media === rhs.media
     }
@@ -83,16 +89,24 @@ struct Bubble: View, Equatable {
                     if !images.isEmpty {
                         VStack(alignment: isUser ? .trailing : .leading, spacing: 6) {
                             ForEach(images, id: \.file) { att in
-                                AttachmentImage(att: att)
-                                    .contextMenu { imageActions(att, library: false) }
+                                Button(action: { openPreview(att) }) {
+                                    AttachmentImage(att: att)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(L.t("open_image"))
+                                .contextMenu { imageActions(att, library: false) }
                             }
                         }
                     }
                     if !outImages.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(outImages, id: \.file) { att in
-                                AttachmentImage(att: att, fit: true)
-                                    .contextMenu { imageActions(att, library: true) }
+                                Button(action: { openPreview(att) }) {
+                                    AttachmentImage(att: att, fit: true)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(L.t("open_image"))
+                                .contextMenu { imageActions(att, library: true) }
                             }
                             HStack(spacing: 14) {
                                 ForEach(Array(outImages.enumerated()), id: \.offset) { _, att in
@@ -129,7 +143,7 @@ struct Bubble: View, Equatable {
                     if !isUser && !streaming, let model {
                         HStack(spacing: 5) {
                             Image(systemName: "brain.head.profile").font(.system(size: 10))
-                            Text(verbatim: elapsed.map { "\(model) · \(String(format: "%.1f", $0)) s" } ?? model)
+                            Text(verbatim: signatureLine(model: model))
                                 .font(.system(size: 12))
                         }
                         .foregroundStyle(Color(.tertiaryLabel))
@@ -173,6 +187,10 @@ struct Bubble: View, Equatable {
         }
     }
 
+    private func openPreview(_ att: Attachment) {
+        onPreview?(att)
+    }
+
     private func saveAsFile() {
         do {
             try Presenter.share(url: AnswerExporter().write(text: text, sources: sources, question: question,
@@ -209,6 +227,13 @@ struct Bubble: View, Equatable {
         } catch {
             shareFailure = error.localizedDescription
         }
+    }
+
+    private func signatureLine(model: String) -> String {
+        var parts = [model]
+        if let elapsed { parts.append(String(format: "%.1f s", elapsed)) }
+        if let thinking { parts.append(thinking.label) }
+        return parts.joined(separator: " · ")
     }
 
     private func openSource(_ s: WebSource) {

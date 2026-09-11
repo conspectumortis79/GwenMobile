@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var loadingModels = false
 
     private var textModels: [String] { ModelFilter.textCandidates(settings.availableModels) }
+    private var visionModels: [String] { settings.visionCandidates }
     private var imageModels: [String] { ModelFilter.imageCandidates(settings.availableModels) }
     private var audioModels: [String] { ModelFilter.audioCandidates(settings.availableModels) }
 
@@ -60,7 +61,8 @@ struct SettingsView: View {
 
                 Section {
                     modelPicker(L.t("chat_model"), selection: $settings.chatModel, options: textModels)
-                    modelPicker(L.t("vision_model"), selection: $settings.visionModel, options: textModels)
+                    thinkingPicker
+                    modelPicker(L.t("vision_model"), selection: $settings.visionModel, options: visionModels)
                     modelPicker(L.t("image_model"), selection: $settings.imageModel, options: imageModels)
                     modelPicker(L.t("audio_model"), selection: $settings.audioModel, options: audioModels)
                     if settings.language == .de {
@@ -84,9 +86,12 @@ struct SettingsView: View {
                 } header: {
                     Text(L.t("models"))
                 } footer: {
-                    Text((settings.availableModels.isEmpty
-                          ? L.t("models_footer_empty")
-                          : L.n("models_footer_count", settings.availableModels.count)) + " " + L.t("image_mode_hint"))
+                    Text([settings.availableModels.isEmpty
+                            ? L.t("models_footer_empty")
+                            : L.n("models_footer_count", settings.availableModels.count),
+                          L.t("image_mode_hint"),
+                          thinkingFooterLine,
+                          visionFooterLine].joined(separator: " "))
                 }
 
                 Section {
@@ -174,6 +179,36 @@ struct SettingsView: View {
         }
     }
 
+    private var thinkingOptions: [ThinkingLevel] {
+        let options = settings.capabilities(for: settings.chatModel).thinking.offeredLevels
+        return options.contains(settings.chatThinkingLevel)
+            ? options
+            : options + [settings.chatThinkingLevel]
+    }
+
+    @ViewBuilder private var thinkingPicker: some View {
+        Picker(L.t("thinking_depth"), selection: $settings.chatThinkingLevel) {
+            ForEach(thinkingOptions, id: \.self) { level in
+                Text(verbatim: level.label).tag(level)
+            }
+        }
+    }
+
+    private var thinkingFooterLine: String {
+        let caps = settings.capabilities(for: settings.chatModel).thinking
+        return caps.isKnown
+            ? L.n("thinking_footer_probed", caps.levels.count)
+            : L.t("thinking_footer_unknown")
+    }
+
+    private var visionFooterLine: String {
+        guard settings.hasVisionCaps else { return L.t("vision_footer_unprobed") }
+        let count = settings.visionCandidates.count
+        return count == 0
+            ? L.t("vision_footer_none")
+            : L.n("vision_footer_count", count)
+    }
+
     private func busyButton(title: String, busyTitle: String, busy: Bool,
                             symbol: String?, enabled: Bool,
                             action: @escaping () -> Void) -> some View {
@@ -202,11 +237,12 @@ struct SettingsView: View {
             settings.availableModels = models
             let text = ModelFilter.textCandidates(models)
             ensureSelection(\.chatModel, valid: models, fallback: text)
-            ensureSelection(\.visionModel, valid: text, fallback: text)
             let images = ModelFilter.imageCandidates(models)
             ensureSelection(\.imageModel, valid: images, fallback: images)
             let audio = ModelFilter.audioCandidates(models)
             ensureSelection(\.audioModel, valid: audio, fallback: audio)
+            await settings.refreshModelCaps(for: text)
+            ensureSelection(\.visionModel, valid: visionModels, fallback: visionModels)
         } catch {
             testResult = L.t("models_error") + L.friendlyError(error.localizedDescription).message
         }

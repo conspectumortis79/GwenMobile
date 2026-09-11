@@ -3,7 +3,8 @@ import Foundation
 enum QwenAPI {
     static func makeRequest(baseURL: String, key: String, model: String,
                             messages: [ChatMessage], imageData: [Data],
-                            stream: Bool = true, system: String? = nil) throws -> URLRequest {
+                            stream: Bool = true, system: String? = nil,
+                            thinking: ThinkingDirective = .nothing) throws -> URLRequest {
         guard let url = HTTP.endpoint(baseURL, APIEndpoint.chatCompletions) else {
             throw APIError(message: L.t("bad_url"))
         }
@@ -12,11 +13,12 @@ enum QwenAPI {
         ] + zip(messages, contentParts(messages: messages, imageData: imageData)).map { m, c in
             ["role": m.role.rawValue, "content": c]
         }
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": model,
             "messages": apiMessages,
             "stream": stream,
         ]
+        thinking.applied(to: &body)
         return try HTTP.jsonPOST(url: url, key: key, body: body,
                                  timeout: APITimeout.chatRequest, accept: "application/json")
     }
@@ -58,22 +60,26 @@ enum QwenAPI {
     }
 
     static func resolveQuery(baseURL: String, key: String, model: String,
-                             history: [ChatMessage]) async throws -> String? {
+                             history: [ChatMessage],
+                             thinking: ThinkingDirective = .nothing) async throws -> String? {
         guard let last = history.last?.text.trimmingCharacters(in: .whitespacesAndNewlines), !last.isEmpty else {
             return nil
         }
         let req = try makeRequest(baseURL: baseURL, key: key, model: model,
                                   messages: FollowUpResolver.requestMessages(text: last, history: history),
-                                  imageData: [], stream: false, system: FollowUpResolver.instructions())
+                                  imageData: [], stream: false, system: FollowUpResolver.instructions(),
+                                  thinking: thinking)
         return try await askText(req)
     }
 
     static func composeImagePrompt(baseURL: String, key: String, model: String,
                                    instruction: String,
-                                   history: [ChatMessage]) async throws -> String? {
+                                   history: [ChatMessage],
+                                   thinking: ThinkingDirective = .nothing) async throws -> String? {
         let req = try makeRequest(baseURL: baseURL, key: key, model: model,
                                   messages: ImagePromptComposer.requestMessages(text: instruction, history: history),
-                                  imageData: [], stream: false, system: ImagePromptComposer.instructions())
+                                  imageData: [], stream: false, system: ImagePromptComposer.instructions(),
+                                  thinking: thinking)
         guard let raw = try await askText(req) else { return nil }
         return ImagePromptComposer.usablePrompt(raw, insteadOf: instruction)
     }
@@ -143,7 +149,8 @@ enum QwenAPI {
     }
 
     static func detectImageIntent(baseURL: String, key: String, model: String,
-                                  instruction: String) async -> ImageRoute? {
+                                  instruction: String,
+                                  thinking: ThinkingDirective = .nothing) async -> ImageRoute? {
         let sys = """
         You are a router for an image tool. The user always attaches one or more existing images \
         plus a text instruction. Reply with exactly one word.
@@ -162,7 +169,7 @@ enum QwenAPI {
         let msg = ChatMessage(role: .user, text: instruction)
         guard let req = try? makeRequest(baseURL: baseURL, key: key, model: model,
                                          messages: [msg], imageData: [],
-                                         stream: false, system: sys),
+                                         stream: false, system: sys, thinking: thinking),
               let text = try? await askText(req) else { return nil }
         let t = text.lowercased()
         if t.contains("edit") { return .edit }
@@ -187,7 +194,8 @@ enum QwenAPI {
     static func calendarPlan(baseURL: String, key: String, model: String,
                              instruction: String,
                              history: [ChatMessage] = [], events: String = "",
-                             calendars: String = "") async throws -> CalendarPlan? {
+                             calendars: String = "",
+                             thinking: ThinkingDirective = .nothing) async throws -> CalendarPlan? {
         let offset = TimeZone.current.secondsFromGMT()
         let oh = offset / 3600, om = abs(offset % 3600 / 60)
         let tz = String(format: "UTC%@%02d:%02d", offset < 0 ? "-" : "+", abs(oh), om)
@@ -244,7 +252,8 @@ enum QwenAPI {
         """
         let msg = ChatMessage(role: .user, text: instruction)
         let req = try makeRequest(baseURL: baseURL, key: key, model: model,
-                                  messages: [msg], imageData: [], stream: false, system: sys)
+                                  messages: [msg], imageData: [], stream: false, system: sys,
+                                  thinking: thinking)
         guard let raw = try await askText(req),
               let s = raw.firstIndex(of: "{"), let e = raw.lastIndex(of: "}"),
               let json = raw[s...e].data(using: .utf8),

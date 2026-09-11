@@ -151,6 +151,38 @@ final class RequestBuildingTests: XCTestCase {
         XCTAssertEqual(req.timeoutInterval, APITimeout.modelsRequest)
     }
 
+    func testChatRequestWithoutThinkingChoiceSendsNoThinkingKeys() throws {
+        let req = try QwenAPI.makeRequest(baseURL: baseURL, key: "k", model: "qwen3.8-flash",
+                                          messages: [ChatMessage(role: .user, text: "hi")],
+                                          imageData: [])
+        let body = jsonObject(req)
+        XCTAssertNil(body["reasoning_effort"])
+        XCTAssertNil(body["enable_thinking"])
+        XCTAssertNil(body["thinking_budget"])
+    }
+
+    func testChatRequestCarriesExactlyOneThinkingKey() throws {
+        let levelled = try QwenAPI.makeRequest(baseURL: baseURL, key: "k", model: "qwen3.8-flash",
+                                               messages: [ChatMessage(role: .user, text: "hi")],
+                                               imageData: [], thinking: .effort(.medium))
+        XCTAssertEqual(jsonObject(levelled)["reasoning_effort"] as? String, "medium")
+        XCTAssertNil(jsonObject(levelled)["enable_thinking"])
+        let off = try QwenAPI.makeRequest(baseURL: baseURL, key: "k", model: "deepseek-v4-pro",
+                                          messages: [ChatMessage(role: .user, text: "hi")],
+                                          imageData: [], thinking: .suppressThinking)
+        XCTAssertEqual(jsonObject(off)["enable_thinking"] as? Bool, false)
+        XCTAssertNil(jsonObject(off)["reasoning_effort"])
+    }
+
+    func testChartPlannerRequestCarriesTheSameThinkingDirective() throws {
+        let req = try ChartPlanner.makeRequest(baseURL: baseURL, key: "k", model: "qwen3.8-flash",
+                                               question: "Einwohner", data: "2024: 84",
+                                               thinking: .effort(.off))
+        let body = jsonObject(req)
+        XCTAssertEqual(body["reasoning_effort"] as? String, "none")
+        XCTAssertNil(body["enable_thinking"])
+    }
+
     func testRealtimeURLIsDerivedFromTheHTTPBaseURL() {
         XCTAssertEqual(RealtimeClient.realtimeURL(baseURL: baseURL, model: "qwen-audio")?.absoluteString,
                        "wss://token-plan.example/api-ws/v1/realtime?model=qwen-audio")
