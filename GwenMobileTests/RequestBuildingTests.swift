@@ -80,6 +80,31 @@ final class RequestBuildingTests: XCTestCase {
         XCTAssertEqual(content.first?["text"] as? String, L.t("describe_images"))
     }
 
+    func testRememberedPictureTravelsWithTheNewestQuestion() throws {
+        let history = [ChatMessage(role: .user, text: "Male einen Turm im Sturm"),
+                       ChatMessage(role: .assistant, text: "Hier ist dein Turm.",
+                                   outImages: [Attachment(file: "gen.jpg")]),
+                       ChatMessage(role: .user, text: "Warum ist der Himmel dort grau?")]
+        let turn = ConversationMemory.turn(from: history) { _ in tinyJPEG }
+        XCTAssertTrue(turn.needsVision)
+        let req = try QwenAPI.makeRequest(baseURL: baseURL, key: "k", model: "vision",
+                                          messages: turn.messages, imageData: turn.images)
+        let content = try XCTUnwrap(messages(req).last?["content"] as? [[String: Any]])
+        XCTAssertEqual(content.first?["text"] as? String, "Warum ist der Himmel dort grau?")
+        let url = ((content.last?["image_url"] as? [String: Any])?["url"] as? String) ?? ""
+        XCTAssertTrue(url.hasPrefix("data:image/jpeg;base64,"))
+        XCTAssertEqual(String(url.dropFirst("data:image/jpeg;base64,".count)), tinyJPEG.base64EncodedString())
+    }
+
+    func testEveryCarriedImageHasItsOwnBytesInTheRequest() throws {
+        let history = [ChatMessage(role: .user, text: "zwei bilder",
+                                   images: [Attachment(file: "a.jpg"), Attachment(file: "b.jpg")]),
+                       ChatMessage(role: .user, text: "noch eine frage")]
+        let turn = ConversationMemory.turn(from: history) { $0.file == "a.jpg" ? tinyJPEG : nil }
+        XCTAssertEqual(turn.images.count, 1)
+        XCTAssertEqual(turn.messages.flatMap(\.images).count, turn.images.count)
+    }
+
     func testTrailingSlashInBaseURLIsCollapsed() throws {
         let req = try QwenAPI.makeRequest(baseURL: baseURL + "/", key: "k", model: "m",
                                           messages: [ChatMessage(role: .user, text: "x")], imageData: [])

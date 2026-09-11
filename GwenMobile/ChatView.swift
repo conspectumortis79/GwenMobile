@@ -356,14 +356,7 @@ struct ChatView: View {
     }
 
     func lastImageCandidate() -> Attachment? {
-        for msg in (store.current?.messages ?? []).reversed() {
-            if msg.role == .assistant, let out = msg.outImages?.last { return out }
-            if msg.role == .user {
-                if let img = msg.images.last { return img }
-                return nil
-            }
-        }
-        return nil
+        ConversationMemory.rememberedImages(from: store.current?.messages ?? []).last
     }
 
     private var emptyHint: some View {
@@ -580,39 +573,52 @@ struct ChatView: View {
         flowMark("SEND prepared n=\(prepared.count)")
 
         let attachments = prepared.map(\.0)
-        let attachedImages = prepared.map(\.1)
-        let followUp = attachments.isEmpty && !text.isEmpty ? lastImageCandidate() : nil
         store.appendMessage(ChatMessage(role: .user, text: text, images: attachments), to: convID)
         let started = Date()
-
-        var imagesForModel = attachedImages
-        if imagesForModel.isEmpty, let followUp, let data = media.data(for: followUp) {
-            imagesForModel = [data]
-        }
-        let hasImage = !imagesForModel.isEmpty
-        let intent = hasImage && !text.isEmpty ? await detectIntent(for: text) : nil
         let history = store.conversations.first { $0.id == convID }?.messages ?? []
+        let loaded = Dictionary(uniqueKeysWithValues: prepared.map { ($0.0.file, $0.1) })
+        let turn = await Task.detached(priority: .userInitiated) {
+            ConversationMemory.turn(from: history) { loaded[$0.file] ?? media.data(for: $0) }
+        }.value
+        var context = SendContext(attachedImage: !attachments.isEmpty,
+                                  rememberedImage: attachments.isEmpty && turn.needsVision)
+        if SendRouter.needsIntentDetection(text: text, context: context) {
+            context.intent = await detectIntent(for: text)
+        }
+        flowMark("SEND attached=\(attachments.count) remembered=\(turn.images.count) "
+                 + "intent=\(String(describing: context.intent))")
 
-        switch SendRouter.route(text: text, hasImage: hasImage, intent: intent) {
+        switch SendRouter.route(text: text, context: context) {
         case .imageEdit:
-            await runImageFlow(prompt: text, images: imagesForModel, isEdit: true,
+            await runImageFlow(prompt: text, history: history, images: turn.images, isEdit: true,
                                convID: convID, started: started)
         case .imageCreate:
-            await runImageFlow(prompt: text, images: [], isEdit: false,
+            await runImageFlow(prompt: text, history: history, images: [], isEdit: false,
                                convID: convID, started: started)
         case .calendar:
-            await runCalendarFlow(text: text, history: history, convID: convID, started: started)
+            await runCalendarFlow(turn: turn, text: text, history: history, convID: convID, started: started)
         case .chart(let webData):
             let question = await standaloneQuestion(history)
             if webData {
-                await runWebChartFlow(question: question, convID: convID, started: started)
+                await runWebChartFlow(question: question, images: turn.images, history: history,
+                                      convID: convID, started: started)
             } else {
-                await runChartFlow(question: question, hits: [], history: history,
+                await runChartFlow(question: question, hits: [], images: turn.images, history: history,
                                    convID: convID, started: started)
             }
         case .chat:
-            await streamChat(history: history, convID: convID, started: started)
+            await streamChat(turn: turn, history: history, convID: convID, started: started)
         }
+    }
+
+    @MainActor private func imagePrompt(_ text: String, history: [ChatMessage]) async -> String {
+        guard ImagePromptComposer.needsConversationContext(text, history: history) else { return text }
+        let composed = try? await QwenAPI.composeImagePrompt(baseURL: settings.baseURL, key: settings.apiKey,
+                                                             model: settings.chatModel,
+                                                             instruction: text, history: history)
+        guard let composed else { return text }
+        flowMark("CTX bild frage=\(text.prefix(40))\u{2192} prompt=\(composed.prefix(90))")
+        return composed
     }
 
     @MainActor private func detectIntent(for text: String) async -> ImageRoute? {
@@ -626,16 +632,17 @@ struct ChatView: View {
         return route
     }
 
-    @MainActor private func runImageFlow(prompt: String, images: [Data], isEdit: Bool,
-                                        convID: UUID, started: Date) async {
-        flowMark("IMAGEFLOW start edit=\(isEdit) images=\(images.count)")
+    @MainActor private func runImageFlow(prompt: String, history: [ChatMessage], images: [Data],
+                                         isEdit: Bool, convID: UUID, started: Date) async {
         imageWorking = true
         workingIsEdit = isEdit
         defer { imageWorking = false }
         let baseURL = settings.baseURL
         let key = settings.apiKey
         let imageModel = settings.imageModel
-        let text = prompt.isEmpty ? L.t("image_default_prompt") : prompt
+        let instruction = prompt.isEmpty ? L.t("image_default_prompt") : prompt
+        let text = isEdit ? instruction : await imagePrompt(instruction, history: history)
+        flowMark("IMAGEFLOW start edit=\(isEdit) images=\(images.count) prompt=\(text.prefix(60))")
         let delivery = ImageDelivery(media: store.media)
         do {
             let urls = try await delivery.generate(baseURL: baseURL, key: key, model: imageModel,
@@ -657,7 +664,7 @@ struct ChatView: View {
         }
     }
 
-    @MainActor private func runCalendarFlow(text: String, history: [ChatMessage],
+    @MainActor private func runCalendarFlow(turn: ModelTurn, text: String, history: [ChatMessage],
                                             convID: UUID, started: Date) async {
         imageWorking = true
         workingLabelOverride = L.t("cal_working")
@@ -675,7 +682,7 @@ struct ChatView: View {
                 store.appendAssistant(info, model: chatModel,
                                       elapsed: Date().timeIntervalSince(started), to: convID)
             } else {
-                await streamChat(history: history, convID: convID, started: started)
+                await streamChat(turn: turn, history: history, convID: convID, started: started)
             }
         } catch {
             store.appendAssistant(AnswerError.other(error.localizedDescription, generic: L.t("err_cal_generic")), model: chatModel,
@@ -705,11 +712,13 @@ struct ChatView: View {
         return try await WebResearch(onStatus: { status in webStatus = status }).hits(for: question)
     }
 
-    @MainActor private func runWebChartFlow(question: String, convID: UUID, started: Date) async {
+    @MainActor private func runWebChartFlow(question: String, images: [Data], history: [ChatMessage],
+                                            convID: UUID, started: Date) async {
         let chatModel = settings.chatModel
         do {
             let hits = try await gatherWebHits(question)
-            await runChartFlow(question: question, hits: hits, convID: convID, started: started)
+            await runChartFlow(question: question, hits: hits, images: images, history: history,
+                               convID: convID, started: started)
         } catch {
             appendWebFailure(error, model: chatModel, convID: convID, started: started)
         }
@@ -721,7 +730,8 @@ struct ChatView: View {
                               model: model, elapsed: Date().timeIntervalSince(started), to: convID)
     }
 
-    @MainActor private func runChartFlow(question: String, hits: [WebHit], history: [ChatMessage] = [],
+    @MainActor private func runChartFlow(question: String, hits: [WebHit], images: [Data],
+                                         history: [ChatMessage],
                                          convID: UUID, started: Date) async {
         imageWorking = true
         workingLabelOverride = L.t("making_chart")
@@ -735,10 +745,10 @@ struct ChatView: View {
         do {
             guard let plan = try await ChartPlanner.plan(baseURL: settings.baseURL, key: settings.apiKey,
                                                          model: chatModel, question: question,
-                                                         data: digest) else {
+                                                         data: digest, images: images) else {
                 throw APIError(message: L.t("chart_no_data"))
             }
-            flowMark("CHART plan kind=\(plan.kind.rawValue) points=\(plan.points.count) web=\(hits.count) daten=\(digest.count)")
+            flowMark("CHART plan kind=\(plan.kind.rawValue) points=\(plan.points.count) web=\(hits.count) daten=\(digest.count) bilder=\(images.count)")
             let urls = try await delivery.generate(baseURL: settings.baseURL, key: settings.apiKey,
                                                    model: imageModel, prompt: plan.imagePrompt())
             let attachments = try await delivery.store(urls)
@@ -756,21 +766,13 @@ struct ChatView: View {
         }
     }
 
-    @MainActor func streamChat(history: [ChatMessage], convID: UUID, started: Date) async {
-        let model = history.contains(where: { !$0.images.isEmpty })
-            ? settings.visionModel : settings.chatModel
-        let rawWindow = Array(history.suffix(30))
-        let lastImageIdx = rawWindow.lastIndex { $0.role == .user && !$0.images.isEmpty }
-        let window = rawWindow.enumerated().map { idx, m -> ChatMessage in
-            if idx == lastImageIdx || m.images.isEmpty { return m }
-            var copy = m
-            copy.images = []
-            return copy
-        }
-        let windowImages = window.flatMap(\.images)
+    @MainActor func streamChat(turn: ModelTurn, history: [ChatMessage],
+                               convID: UUID, started: Date) async {
+        let model = turn.needsVision ? settings.visionModel : settings.chatModel
+        let messages = turn.messages
+        let images = turn.images
         let baseURL = settings.baseURL
         let key = settings.apiKey
-        let media = store.media
 
         isStreaming = true
         streamText = ""
@@ -780,14 +782,10 @@ struct ChatView: View {
 
         do {
             let req = try await Task.detached(priority: .userInitiated, operation: { () throws -> URLRequest in
-                var historyImages: [Data] = []
-                for a in windowImages {
-                    if let d = media.data(named: a.file) { historyImages.append(d) }
-                }
-                return try QwenAPI.makeRequest(baseURL: baseURL, key: key, model: model,
-                                               messages: window, imageData: historyImages,
-                                               stream: true)
+                try QwenAPI.makeRequest(baseURL: baseURL, key: key, model: model,
+                                        messages: messages, imageData: images, stream: true)
             }).value
+            flowMark("CHAT send msgs=\(messages.count) bilder=\(images.count) model=\(model)")
             let full = try await ChatRunner.shared.run(req) { chunk in throttle.receive(chunk) }
             throttle.cancel()
             streamText = ""
@@ -796,10 +794,10 @@ struct ChatView: View {
                 isStreaming = false
                 let question = await standaloneQuestion(history)
                 if markers.search {
-                    try await runWebSearch(question: question, convID: convID, started: started,
-                                           chart: markers.chart, history: history)
+                    try await runWebSearch(question: question, images: images, convID: convID,
+                                           started: started, chart: markers.chart, history: history)
                 } else {
-                    await runChartFlow(question: question, hits: [], history: history,
+                    await runChartFlow(question: question, hits: [], images: images, history: history,
                                        convID: convID, started: started)
                 }
                 return
@@ -826,18 +824,19 @@ struct ChatView: View {
         }
     }
 
-    @MainActor func runWebSearch(question: String, convID: UUID, started: Date,
-                                 chart: Bool = false, history: [ChatMessage] = []) async throws {
+    @MainActor func runWebSearch(question: String, images: [Data], convID: UUID, started: Date,
+                                 chart: Bool, history: [ChatMessage]) async throws {
         let chatModel = settings.chatModel
         do {
             let hits = try await gatherWebHits(question)
             if chart {
-                await runChartFlow(question: question, hits: hits, history: history,
+                await runChartFlow(question: question, hits: hits, images: images, history: history,
                                    convID: convID, started: started)
                 return
             }
             let req = try WebSearch.makeAnswerRequest(baseURL: settings.baseURL, key: settings.apiKey,
-                                                      model: chatModel, question: question, hits: hits)
+                                                      model: chatModel, question: question, hits: hits,
+                                                      history: history)
             isStreaming = true
             streamText = ""
             let throttle = StreamThrottle { chunk in streamText += chunk }

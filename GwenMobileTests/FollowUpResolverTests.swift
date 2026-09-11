@@ -42,7 +42,7 @@ final class FollowUpResolverTests: XCTestCase {
         XCTAssertFalse(text.contains("Nachricht 1"), "ältere Nachrichten fallen heraus")
         let contextLines = text.components(separatedBy: "\n")
             .filter { $0.hasPrefix("user:") || $0.hasPrefix("assistant:") }
-        XCTAssertEqual(contextLines.count, FollowUpResolver.maxContextMessages)
+        XCTAssertEqual(contextLines.count, ConversationTranscript.defaultLimit)
     }
 
     func testLongHistoryMessagesAreCappedAndKeptOnOneLine() {
@@ -54,7 +54,7 @@ final class FollowUpResolverTests: XCTestCase {
         XCTAssertFalse(text.contains("ZEILE2"))
         XCTAssertTrue(text.contains("und daraus?"))
         let assistantLine = text.components(separatedBy: "\n").first { $0.hasPrefix("assistant:") } ?? ""
-        XCTAssertLessThanOrEqual(assistantLine.count, FollowUpResolver.maxCharsPerMessage + 20)
+        XCTAssertLessThanOrEqual(assistantLine.count, ConversationTranscript.defaultCap + 20)
     }
 
     func testSanitizeTakesOneCleanQueryLine() {
@@ -82,5 +82,7 @@ final class FollowUpResolverTests: XCTestCase {
         XCTAssertTrue(instructions.contains("only that query on a single line"))
         XCTAssertTrue(instructions.contains("already self-contained, repeat it unchanged"))
         XCTAssertTrue(instructions.contains("und in Deutschland?"))
+        XCTAssertTrue(instructions.contains("[image attached]"))
+        XCTAssertTrue(instructions.contains("[generated image]"))
     }
 }

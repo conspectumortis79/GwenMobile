@@ -68,6 +68,16 @@ enum QwenAPI {
         return try await askText(req)
     }
 
+    static func composeImagePrompt(baseURL: String, key: String, model: String,
+                                   instruction: String,
+                                   history: [ChatMessage]) async throws -> String? {
+        let req = try makeRequest(baseURL: baseURL, key: key, model: model,
+                                  messages: ImagePromptComposer.requestMessages(text: instruction, history: history),
+                                  imageData: [], stream: false, system: ImagePromptComposer.instructions())
+        guard let raw = try await askText(req) else { return nil }
+        return ImagePromptComposer.usablePrompt(raw, insteadOf: instruction)
+    }
+
     static func fetchModelsRequest(baseURL: String, key: String) throws -> URLRequest {
         guard let url = HTTP.endpoint(baseURL, APIEndpoint.models) else {
             throw APIError(message: L.t("bad_url"))
@@ -181,10 +191,7 @@ enum QwenAPI {
         let offset = TimeZone.current.secondsFromGMT()
         let oh = offset / 3600, om = abs(offset % 3600 / 60)
         let tz = String(format: "UTC%@%02d:%02d", offset < 0 ? "-" : "+", abs(oh), om)
-        let hist = history.suffix(6).map { m in
-            let t = m.text.count > 200 ? String(m.text.prefix(200)) + "\u{2026}" : m.text
-            return "\(m.role == .user ? "user" : "assistant"): \(t)"
-        }.joined(separator: "\n")
+        let hist = ConversationTranscript.from(messages: history)
         var ctx = ""
         if !events.isEmpty {
             ctx += "\nExisting upcoming events (title \u{2014} start \u{2014} current notifications \u{2014} calendar):\n\(events)\n"

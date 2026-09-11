@@ -73,4 +73,34 @@ final class ResearchContextTests: XCTestCase {
         XCTAssertEqual(onlyQuestions.digest, "")
         XCTAssertTrue(onlyQuestions.sources.isEmpty)
     }
+
+    func testResearchAnswerRemembersWhatWasTalkedAboutBefore() throws {
+        let history = [ChatMessage(role: .user, text: "Wie viele Einwohner hat Deutschland?"),
+                       ChatMessage(role: .assistant, text: "2024 waren es 84,7 Millionen."),
+                       ChatMessage(role: .user, text: "und in österreich?")]
+        let request = try WebSearch.makeAnswerRequest(baseURL: "https://api.test/v1", key: "k", model: "m",
+                                                      question: "Einwohnerzahl Österreich 2024",
+                                                      hits: [Fixtures.hit("Statista", "https://a.test", "a.test", "9,2 Millionen")],
+                                                      history: history)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
+        let messages = try XCTUnwrap(body["messages"] as? [[String: Any]])
+        let content = try XCTUnwrap(messages.last?["content"] as? String)
+        XCTAssertTrue(content.contains("## Bisheriger Verlauf"))
+        XCTAssertTrue(content.contains("84,7 Millionen"))
+        XCTAssertFalse(content.contains("und in österreich?"), "die eigene neue Frage ist kein Kontext")
+        XCTAssertTrue(content.contains("## Quelle [1] Statista"))
+        XCTAssertTrue(content.hasSuffix("Einwohnerzahl Österreich 2024"))
+    }
+
+    func testResearchAnswerWithoutHistoryStaysWithTheSourcesAlone() throws {
+        let request = try WebSearch.makeAnswerRequest(baseURL: "https://api.test/v1", key: "k", model: "m",
+                                                      question: "frage",
+                                                      hits: [Fixtures.hit("T", "https://a.test", "a.test", "text")])
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
+        let messages = try XCTUnwrap(body["messages"] as? [[String: Any]])
+        let content = try XCTUnwrap(messages.last?["content"] as? String)
+        XCTAssertFalse(content.contains("## Bisheriger Verlauf"))
+        let system = try XCTUnwrap(messages.first?["content"] as? String)
+        XCTAssertTrue(system.contains("Bisheriger Verlauf"))
+    }
 }

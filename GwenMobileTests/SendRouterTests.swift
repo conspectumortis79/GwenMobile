@@ -7,43 +7,52 @@ final class SendRouterTests: XCTestCase {
         L.apply(.de)
     }
 
+    private func attached(_ intent: ImageRoute?) -> SendContext {
+        SendContext(attachedImage: true, intent: intent)
+    }
+
+    private func remembered(_ intent: ImageRoute? = nil) -> SendContext {
+        SendContext(rememberedImage: true, intent: intent)
+    }
+
     func testEditIntentKeepsEditing() {
-        XCTAssertEqual(SendRouter.route(text: "färbe die maus blau", hasImage: true, intent: .edit), .imageEdit)
+        XCTAssertEqual(SendRouter.route(text: "färbe die maus blau", context: attached(.edit)), .imageEdit)
     }
 
     func testCreateIntentRegeneratesWithoutInputImage() {
-        XCTAssertEqual(SendRouter.route(text: "mache einen hintergrund wie gemalt", hasImage: true, intent: .create), .imageCreate)
+        XCTAssertEqual(SendRouter.route(text: "mache einen hintergrund wie gemalt",
+                                        context: attached(.create)), .imageCreate)
     }
 
     func testChatIntentStaysInChat() {
-        XCTAssertEqual(SendRouter.route(text: "was ist das für ein tier?", hasImage: true, intent: .chat), .chat)
+        XCTAssertEqual(SendRouter.route(text: "was ist das für ein tier?", context: attached(.chat)), .chat)
     }
 
     func testMissingIntentWithImageAndEmptyTextIsChat() {
-        XCTAssertEqual(SendRouter.route(text: "", hasImage: true, intent: nil), .chat)
-        XCTAssertEqual(SendRouter.route(text: "mache das bild heller", hasImage: true, intent: nil), .chat)
+        XCTAssertEqual(SendRouter.route(text: "", context: attached(nil)), .chat)
+        XCTAssertEqual(SendRouter.route(text: "mache das bild heller", context: attached(nil)), .chat)
     }
 
     func testMissingIntentFallsBackToCreationHeuristic() {
-        XCTAssertEqual(SendRouter.route(text: "erzeuge ein poster", hasImage: true, intent: nil), .imageCreate)
+        XCTAssertEqual(SendRouter.route(text: "erzeuge ein poster", context: attached(nil)), .imageCreate)
     }
 
     func testEditHeuristicBlocksCreationFallback() {
         XCTAssertEqual(SendRouter.route(text: "male das bild, aber ändere nur den rahmen",
-                                       hasImage: true, intent: nil), .chat)
+                                       context: attached(nil)), .chat)
     }
 
     func testTextOnlyCreationRequestRoutesToImageModel() {
-        XCTAssertEqual(SendRouter.route(text: "generate a logo", hasImage: false, intent: nil), .imageCreate)
+        XCTAssertEqual(SendRouter.route(text: "generate a logo", context: SendContext()), .imageCreate)
     }
 
     func testCalendarRequestNeedsTextWithoutImage() {
-        XCTAssertEqual(SendRouter.route(text: "leg einen termin morgen an", hasImage: false, intent: nil), .calendar)
-        XCTAssertEqual(SendRouter.route(text: "leg einen termin morgen an", hasImage: true, intent: .chat), .chat)
+        XCTAssertEqual(SendRouter.route(text: "leg einen termin morgen an", context: SendContext()), .calendar)
+        XCTAssertEqual(SendRouter.route(text: "leg einen termin morgen an", context: attached(.chat)), .chat)
     }
 
     func testIntentIsIgnoredWhenDetectionDidNotRun() {
-        XCTAssertEqual(SendRouter.route(text: "extrahiere den text", hasImage: false, intent: nil), .chat)
+        XCTAssertEqual(SendRouter.route(text: "extrahiere den text", context: SendContext()), .chat)
     }
 
     func testSearchMarkerTokenMatchesPromptInstruction() {
@@ -52,19 +61,56 @@ final class SendRouterTests: XCTestCase {
 
     func testExplicitChartOfDataWinsOverPlainImageHeuristics() {
         XCTAssertEqual(SendRouter.route(text: "such im internet nach den einwohnerzahlen und stell sie als diagramm dar",
-                                        hasImage: false, intent: nil), .chart(webData: true))
+                                        context: SendContext()), .chart(webData: true))
         XCTAssertEqual(SendRouter.route(text: "erzeuge ein diagramm über die umsatzzahlen",
-                                        hasImage: false, intent: nil), .chart(webData: false))
+                                        context: SendContext()), .chart(webData: false))
     }
 
     func testPlainQuestionsAndOtherFlowsKeepTheirRoute() {
         XCTAssertEqual(SendRouter.route(text: "was sagt die statistik über die bevölkerung?",
-                                        hasImage: false, intent: nil), .chat)
+                                        context: SendContext()), .chat)
         XCTAssertEqual(SendRouter.route(text: "erzeuge ein bild von einem drachen",
-                                        hasImage: false, intent: nil), .imageCreate)
+                                        context: SendContext()), .imageCreate)
         XCTAssertEqual(SendRouter.route(text: "leg einen termin morgen an",
-                                        hasImage: false, intent: nil), .calendar)
+                                        context: SendContext()), .calendar)
+    }
+
+    func testChartWishOnAPictureIsAChartAndNotAVisionAnswer() {
         XCTAssertEqual(SendRouter.route(text: "stell die zahlen als diagramm dar",
-                                        hasImage: true, intent: .chat), .chat)
+                                        context: attached(.chat)), .chart(webData: false))
+        XCTAssertEqual(SendRouter.route(text: "stell die werte aus dem foto als diagramm dar",
+                                        context: remembered()), .chart(webData: false))
+    }
+
+    func testFollowUpEditOfARememberedPictureNeedsNoClassifier() {
+        XCTAssertEqual(SendRouter.route(text: "mach das bild dunkler", context: remembered()), .imageEdit)
+    }
+
+    func testRememberedPictureStillAnswersQuestionsInChat() {
+        XCTAssertEqual(SendRouter.route(text: "warum ist der himmel dort grau?", context: remembered(.chat)), .chat)
+        XCTAssertEqual(SendRouter.route(text: "wer ist auf dem foto zu sehen?", context: remembered()), .chat)
+    }
+
+    func testClassifierDecidesForARememberedPicture() {
+        XCTAssertEqual(SendRouter.route(text: "irgendwas neues dazu", context: remembered(.create)), .imageCreate)
+        XCTAssertEqual(SendRouter.route(text: "und noch heller", context: remembered(.edit)), .imageEdit)
+    }
+
+    func testCalendarWishSurvivesARememberedPicture() {
+        XCTAssertEqual(SendRouter.route(text: "leg einen termin morgen an", context: remembered()), .calendar)
+    }
+
+    func testIntentDetectionRunsOnlyWhereItCanStillChangeTheRoute() {
+        XCTAssertTrue(SendRouter.needsIntentDetection(text: "was ist das für ein tier?", context: attached(nil)))
+        XCTAssertTrue(SendRouter.needsIntentDetection(text: "mache das bild heller", context: attached(nil)))
+        XCTAssertTrue(SendRouter.needsIntentDetection(text: "erzeuge ein poster", context: attached(nil)))
+        XCTAssertFalse(SendRouter.needsIntentDetection(text: "stell die zahlen als diagramm dar",
+                                                       context: attached(nil)))
+        XCTAssertFalse(SendRouter.needsIntentDetection(text: "was ist das für ein tier?", context: SendContext()))
+        XCTAssertFalse(SendRouter.needsIntentDetection(text: "", context: attached(nil)))
+        XCTAssertFalse(SendRouter.needsIntentDetection(text: "mach das bild dunkler", context: remembered()))
+        XCTAssertFalse(SendRouter.needsIntentDetection(text: "leg einen termin morgen an", context: remembered()))
+        XCTAssertTrue(SendRouter.needsIntentDetection(text: "warum ist der himmel dort grau?",
+                                                      context: remembered()))
     }
 }

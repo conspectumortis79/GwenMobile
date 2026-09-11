@@ -148,5 +148,35 @@ final class ChartPlanTests: XCTestCase {
         let user = try XCTUnwrap(messages.last?["content"] as? String)
         XCTAssertFalse(user.contains("## DATA"))
         XCTAssertTrue(user.contains("nur frage"))
+        let system = try XCTUnwrap(messages.first?["content"] as? String)
+        XCTAssertFalse(system.contains("A picture is attached"))
+    }
+
+    func testRequestReadsNumbersOffAnAttachedPicture() throws {
+        let tiny = Data([0xFF, 0xD8, 0xFF, 0xD9])
+        let req = try ChartPlanner.makeRequest(baseURL: "https://api.test/v1", key: "k", model: "m",
+                                              question: "stell die werte als diagramm dar", data: "",
+                                              images: [tiny])
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: req.httpBody ?? Data()) as? [String: Any])
+        let messages = try XCTUnwrap(body["messages"] as? [[String: Any]])
+        let parts = try XCTUnwrap(messages.last?["content"] as? [[String: Any]])
+        XCTAssertEqual(parts.first?["type"] as? String, "text")
+        XCTAssertTrue(((parts.first?["text"] as? String) ?? "").contains("stell die werte als diagramm dar"))
+        let url = ((parts.last?["image_url"] as? [String: Any])?["url"] as? String) ?? ""
+        XCTAssertTrue(url.hasPrefix("data:image/jpeg;base64,\(tiny.base64EncodedString())"))
+        let system = try XCTUnwrap(messages.first?["content"] as? String)
+        XCTAssertTrue(system.contains("A picture is attached"))
+        XCTAssertTrue(system.contains("never fall back to your own knowledge"))
+    }
+
+    func testOnlyTheNewestPicturesReachThePlanner() throws {
+        let tiny = Data([0xFF, 0xD8, 0xFF, 0xD9])
+        let req = try ChartPlanner.makeRequest(baseURL: "https://api.test/v1", key: "k", model: "m",
+                                              question: "diagramm", data: "",
+                                              images: [tiny, tiny, tiny])
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: req.httpBody ?? Data()) as? [String: Any])
+        let messages = try XCTUnwrap(body["messages"] as? [[String: Any]])
+        let parts = try XCTUnwrap(messages.last?["content"] as? [[String: Any]])
+        XCTAssertEqual(parts.count, ChartPlanner.maxInputImages + 1)
     }
 }

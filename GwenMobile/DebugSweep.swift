@@ -200,7 +200,7 @@ extension ChatView {
         }.value
     }
 
-    func runAirDropProbe() async {
+    func runAirDropProbe(seconds: Int = 900, graceSeconds: Int = 10) async {
         UIApplication.shared.isIdleTimerDisabled = true
         var report = SweepReport()
         var attachments = store.conversations.flatMap { c in c.messages.flatMap { $0.outImages ?? [] } }
@@ -212,21 +212,38 @@ extension ChatView {
             attachments = store.current?.messages.flatMap { $0.outImages ?? [] } ?? []
             report.add("AIRDROP_ERZEUGT", "bilder=\(attachments.count)")
         }
-        if let att = attachments.last, let url = store.media.storedURL(for: att) {
-            let bytes = (try? Data(contentsOf: url))?.count ?? -1
-            report.add("AIRDROP_DATEI", "name=\(url.lastPathComponent) endung=\(url.pathExtension) bytes=\(bytes)")
-            do {
-                try Presenter.share(items: [url])
-                try? await Task.sleep(for: .seconds(2))
-                let opened = Presenter.activeShareSheet?.presentingViewController != nil
-                Presenter.activeShareSheet?.completionWithItemsHandler?(.airDrop, true, nil, nil)
-                try? await Task.sleep(for: .seconds(3))
-                let closed = Presenter.activeShareSheet?.presentingViewController == nil
-                report.add("AIRDROP_SCHLUSS", "geoeffnet=\(opened) automatischZu=\(closed)")
-            } catch { report.addFailure("AIRDROP_FENSTER", error) }
-        } else {
+        guard let att = attachments.last, let url = store.media.storedURL(for: att) else {
             report.add("AIRDROP_DATEI", "keinBildGefunden")
+            report.write(into: "airdrop_probe.txt")
+            UIApplication.shared.isIdleTimerDisabled = false
+            return
         }
+        let bytes = (try? Data(contentsOf: url))?.count ?? -1
+        report.add("AIRDROP_DATEI", "name=\(url.lastPathComponent) endung=\(url.pathExtension) bytes=\(bytes)")
+        do {
+            try Presenter.share(url: url, closesOn: [.airDrop])
+        } catch { report.addFailure("AIRDROP_FENSTER", error) }
+        var gefunden: UIActivityViewController?
+        for _ in 0..<50 {
+            try? await Task.sleep(for: .milliseconds(200))
+            if let sheet = Presenter.topViewController as? UIActivityViewController { gefunden = sheet; break }
+        }
+        guard let sheet = gefunden else {
+            report.add("AIRDROP_BEOBACHTUNG", "keinSheet")
+            report.write(into: "airdrop_probe.txt")
+            UIApplication.shared.isIdleTimerDisabled = false
+            return
+        }
+        let events = ShareProbeEvents()
+        let observer = ShareFlowObserver(sheet: sheet, events: events)
+        for lauf in 0..<(seconds * 5) {
+            try? await Task.sleep(for: .milliseconds(200))
+            observer.tick()
+            if lauf * 200 >= graceSeconds * 1000, observer.sheetIsGone { break }
+        }
+        report.add("AIRDROP_BEOBACHTUNG", "ereignisse=\(events.all.count)")
+        for line in events.all { report.add("BEOB", line) }
+        report.add("AIRDROP_ENDE", "chatSichtbarWieder=\(observer.sheetIsGone)")
         report.write(into: "airdrop_probe.txt")
         flowLog.info("AIRDROPPROBE bericht geschrieben")
         UIApplication.shared.isIdleTimerDisabled = false

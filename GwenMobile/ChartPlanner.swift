@@ -2,23 +2,30 @@ import Foundation
 
 enum ChartPlanner {
     static let maxDataChars = 9000
+    static let maxInputImages = 2
 
     static func makeRequest(baseURL: String, key: String, model: String,
-                           question: String, data: String) throws -> URLRequest {
+                            question: String, data: String, images: [Data] = []) throws -> URLRequest {
         let body: [String: Any] = [
             "model": model,
             "stream": false,
             "messages": [
-                ["role": "system", "content": instructions()],
-                ["role": "user", "content": userContent(question: question, data: data)],
+                ["role": "system", "content": instructions(hasImages: !images.isEmpty)],
+                ["role": "user", "content": userContent(question: question, data: data, images: images)],
             ],
         ]
         return try HTTP.jsonPOST(url: HTTP.chatCompletionsURL(baseURL), key: key, body: body,
                                 timeout: APITimeout.chatRequest)
     }
 
-    static func userContent(question: String, data: String) -> String {
-        data.isEmpty ? "## Frage\n\(question)" : "## DATA\n\(data)\n\n## Frage\n\(question)"
+    static func userContent(question: String, data: String, images: [Data] = []) -> Any {
+        let text = data.isEmpty ? "## Frage\n\(question)" : "## DATA\n\(data)\n\n## Frage\n\(question)"
+        guard !images.isEmpty else { return text }
+        var parts: [[String: Any]] = [["type": "text", "text": text]]
+        for image in images.prefix(maxInputImages) {
+            parts.append(["type": "image_url", "image_url": ["url": QwenAPI.dataURL(image)]])
+        }
+        return parts
     }
 
     static func plan(from raw: String?) -> ChartPlan? {
@@ -28,16 +35,19 @@ enum ChartPlanner {
         return plan.isUsable ? plan : nil
     }
 
-    static func plan(baseURL: String, key: String, model: String,
-                     question: String, data: String) async throws -> ChartPlan? {
+    static func plan(baseURL: String, key: String, model: String, question: String, data: String,
+                     images: [Data] = []) async throws -> ChartPlan? {
         let capped = data.count > maxDataChars ? String(data.prefix(maxDataChars)) : data
-        let raw = try await QwenAPI.askText(makeRequest(baseURL: baseURL, key: key, model: model,
-                                                       question: question, data: capped))
+        let raw = try await Task.detached(priority: .userInitiated) { () throws -> String? in
+            let req = try makeRequest(baseURL: baseURL, key: key, model: model,
+                                      question: question, data: capped, images: images)
+            return try await QwenAPI.askText(req)
+        }.value
         return plan(from: raw)
     }
 
-    private static func instructions() -> String {
-        """
+    private static func instructions(hasImages: Bool) -> String {
+        var text = """
         You are the chart planner of a chat app. Turn the request into ONE chart that an image model will draw.
         Reply with ONLY one JSON object, no markdown fences, no comments:
         {"kind":"bar|line|pie|area|scatter","title":"short title in the language of the request",\
@@ -45,8 +55,9 @@ enum ChartPlanner {
         "series":"short name of the data series",\
         "points":[{"label":"category, year or country","value":12.34}]}
         Rules:
-        - Copy values ONLY from the DATA block. Never estimate, never round a different way, never add numbers \
-        from your own knowledge while a DATA block is present.
+        - Copy values ONLY from the data you are given: the DATA block and, when one is attached, the picture.
+        Never estimate, never round a different way, never add numbers from your own knowledge while data is \
+        present.
         - If the DATA block is missing a number you need, leave that point out. If fewer than two numbers are \
         available, answer {"kind":"bar","points":[]}.
         - 2 to 8 points, in the order the data gives them (chronological for a time series). Prefer 4 to 8 \
@@ -59,5 +70,15 @@ enum ChartPlanner {
         - "label" is at most 24 characters, in the language of the request, and it must be readable inside a chart.
         - Only when there is NO DATA block at all you may use your own knowledge for the numbers.
         """
+        guard hasImages else { return text }
+        text += """
+
+        A picture is attached to this request, so it counts as data: read its labels, dates and numbers with \
+        your eyes and copy them exactly. Prefer the DATA block when it carries the needed numbers, use the \
+        picture when the DATA block is missing or incomplete, and never fall back to your own knowledge while \
+        a picture is attached. Never invent a value that is neither in the DATA block nor readable in the \
+        picture.
+        """
+        return text
     }
 }

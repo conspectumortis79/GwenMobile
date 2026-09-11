@@ -12,6 +12,8 @@ Swift 6, strict concurrency, iOS 17+.
   ON/OFF state) — camera first, because the photo is only the fallback when you cannot aim;
   mic and send stay one tap away, so the text field is roughly twice as wide
 - Multiple conversations, persisted locally (JSON + images in the app sandbox)
+- Every request is sent in context: the conversation (its last 30 turns) plus the newest picture — yours or
+  AI-generated — so follow-up questions, diagrams and new pictures build on what came before
 - API key stored in the Keychain, never in files
 - Bilingual UI (German / English), day separators, timestamps, markdown-lite rendering
   (bold, inline code, links) applied to the live stream as well; a marker that is still open,
@@ -64,17 +66,36 @@ Swift 6, strict concurrency, iOS 17+.
   memory. Without any prior research the planner still falls back to the model's own knowledge, and a
   rewrite that is unusable (too short, a refusal, identical to the original) is discarded in favour of
   the user's own words.
-- Rewrites are logged on device as `CTX rewrite frage=…→ frage=…` in `Documents/flow_trace.txt`.
+- **The last picture belongs to the memory.** `ConversationMemory` rebuilds what the model receives on
+  every turn: the last 30 messages, plus exactly one picture — your newest attachment or the newest
+  picture the app generated. "Warum ist der Himmel dort grau?" after a generated image and "und was ist
+  rechts auf dem Foto?" after a photo therefore reach the vision model *with that picture*, attached to
+  your new question. Older pictures are dropped so the request stays small, and a picture whose file
+  vanished is left out of the message and out of the byte list at the same time, so text and image can
+  never drift apart.
+- **Pictures feed the diagram, not only the chat.** The diagram wish is decided before the image router, so
+  "stell die Werte aus dem Foto als Diagramm dar" or "mach daraus ein Liniendiagramm" now lands at
+  `ChartPlanner` with the picture attached: the planner reads labels and numbers off the image, and the
+  researched `## DATA` block still wins wherever both are present. Nothing is estimated — the chart shows
+  what was on screen.
+- **Image wishes read the conversation.** "erzeuge ein Bild aus diesen Informationen", "male das nochmal
+  bei Nacht": `ImagePromptComposer` notices the reference and has the chat model turn the earlier answer
+  into one self-contained prompt before the image model is called, because that model never sees the chat.
+  A request that already stands on its own costs no extra call, and a refusal or a plain echo of your
+  words is discarded in favour of what you typed.
+- Rewrites and composed prompts are logged on device as `CTX rewrite frage=…→ frage=…` and
+  `CTX bild frage=…→ prompt=…` in `Documents/flow_trace.txt`.
 
 ### Images
 - Attach photos from camera or gallery; the vision model (e.g. qwen3.8-max) sees them
 - No switch, no toggle, no separate mode: what you type decides whether you get a
   picture. There is no image-AI on/off control anywhere in the UI.
 - **AI image generation**: ask in plain text — "Erzeuge ein Bild von …", "generate a
-  picture of …", "draw a logo" — and the message goes straight to the image model
-  (e.g. wan2.7-image). A message without attachments becomes an image request as soon
-  as it pairs a creation verb (erstelle, erzeuge, generiere, zeichne, male, kreiere,
-  create, generate, draw, make) with a picture noun (Bild, Abbild, Illustration, Foto,
+  picture of …", "draw a logo" — and the message goes to the image model
+  (e.g. wan2.7-image); when your wording points back at the conversation ("davon", "aus diesen
+  Informationen"), that conversation is folded into the prompt first. A message without attachments
+  becomes an image request as soon as it pairs a creation verb (erstelle, erzeuge, generiere, zeichne,
+  male, kreiere, create, generate, draw, make) with a picture noun (Bild, Abbild, Illustration, Foto,
   picture, image, photo, logo, poster, wallpaper)
 - **AI image editing**: attach an image and describe the change
   ("make the mouse blue") — the image is edited in place, not regenerated
@@ -82,7 +103,9 @@ Swift 6, strict concurrency, iOS 17+.
   EDIT / CREATE / CHAT by the text model, so plain questions about a
   photo still go to the vision chat; if the classifier returns no answer, a
   keyword fallback still routes obvious "create something new" requests to the
-  image model and everything else to chat
+  image model and everything else to chat.
+  An explicit diagram wish is never hijacked by that router — it goes to the chart flow, with the picture as
+  its data source
 - Follow-up edits: right after an image answer, just say "make it darker" —
   the previous result is picked up as the input image, no re-attaching
 - Long-press any generated image → "Edit" to send it back into the input bar
@@ -96,10 +119,14 @@ Swift 6, strict concurrency, iOS 17+.
 - What is handed over is the stored JPEG file itself, not a re-encoded thumbnail, so the
   receiver gets the same bytes the app shows. If the file has been cleaned away in the meantime,
   the app says so instead of sharing an empty attachment.
-- Once an activity reports that it finished (AirDrop delivered, Mail sent, …) the share sheet
-  closes by itself and the chat is visible again — no leftover panel to tap away. Cancelling or
-  an activity that never reports back leaves the normal system behaviour untouched, and a sheet
-  the system already tore down is never dismissed twice.
+- The instant the picture is handed over to AirDrop the whole share presentation is torn down —
+  the AirDrop window (`SFAirDropViewController`), the sheet above it, everything — and the chat is
+  in front again. The transfer itself keeps running in the system: the file still arrives on the
+  Mac although the app already shows the chat. iOS never reports an AirDrop delivery to the app
+  (`completionWithItemsHandler` stays silent, measured on device), so the hand-over event of the
+  activity item source is what closes the windows — no timer, no time window.
+- Every other activity (Mail, Messages, Notes, printing) closes the sheet as soon as the system
+  reports that activity back, and a sheet the system already tore down is never dismissed twice.
 
 ### Histories and storage
 - The header's list button opens "Verläufe": every conversation with its date, message
@@ -207,7 +234,7 @@ open GwenMobile.xcodeproj
 ## Tests
 The `GwenMobileTests` target holds the unit tests (pure logic: audio codec, intent
 heuristics, routing, request building, response decoding, error translation,
-localisation, storage, conversation store, stream throttling, answer export, the
+localisation, storage, conversation store, conversation memory, routing context, stream throttling, answer export, the
 waiting-indicator rhythm). No network, no device.
 ```
 xcodegen generate
@@ -241,7 +268,10 @@ follow-up rewrite and chart generation, report in `Documents/chart_probe.txt`) a
 report in `Documents/search_once.txt`, `kapsel=nil` is the passing state) and `exportprobe`
 (real answer, then the rendered export: file name, `<strong>`/`<p>`/`<a href>` counts and whether any
 raw `**` survived — report in `Documents/export_probe.txt`) and `airdropprobe`
-(stored JPEG of the newest chat picture handed to the share sheet — `Documents/airdrop_probe.txt`),
+(stored JPEG of the newest chat picture handed to the share sheet through the real `Presenter`
+path, then the presentation chain is polled until it is gone — `Documents/airdrop_probe.txt`
+reports every chain change and ends with `chatSichtbarWieder=true` once the AirDrop hand-over
+closes the sheet and the AirDrop window by itself),
 `menushow` (opens the "+" menu and leaves it open, for screenshots), plus a bare
 `gwenmobile://test/<attachment-file-name>` for a single image. They assume the conversations and image files of the reference
 device exist in the app sandbox (`img_0B85747A-BAA.jpg`, `img_7924D952-6BF.jpg`) and

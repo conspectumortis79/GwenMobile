@@ -86,8 +86,13 @@ enum WebSearch {
     }
 
     static func makeAnswerRequest(baseURL: String, key: String, model: String,
-                                  question: String, hits: [WebHit]) throws -> URLRequest {
+                                  question: String, hits: [WebHit],
+                                  history: [ChatMessage] = []) throws -> URLRequest {
         var context = ""
+        let transcript = ConversationTranscript.withoutTheNewestQuestion(from: history)
+        if !transcript.isEmpty {
+            context += "## Bisheriger Verlauf der Unterhaltung (nur zur Einordnung der Frage, nicht als Quelle)\n\(transcript)\n\n"
+        }
         for (i, h) in hits.enumerated() {
             context += "## Quelle [\(i + 1)] \(h.title) — \(h.domain)\n\(h.text)\n\n"
         }
@@ -127,7 +132,10 @@ enum WebSearch {
 
     private static func researchInstructions() -> String {
         "Du bist ein Recherche-Assistent. Beantworte die Frage des Nutzers AUSSCHLIESSLICH auf Basis "
-            + "der angegebenen Web-Quellen. Zitiere jede Aussage mit der Quellennummer in eckigen Klammern, "
+            + "der angegebenen Web-Quellen. Ein etwaiger Block 'Bisheriger Verlauf der Unterhaltung' dient nur "
+            + "dazu, Rückverweise wie 'dazu', 'damit' oder 'das Bild' aufzulösen; seine Aussagen sind keine Quelle "
+            + "und dürfen nicht als Fakten wiederholt werden, es sei denn, eine Quelle bestätigt sie. "
+            + "Zitiere jede Aussage mit der Quellennummer in eckigen Klammern, "
             + "z. B. [1] oder [2][3]. Nutze mindestens zwei Quellen fuer die Kernantwort, wenn es sie gibt; wenn sich "
             + "Quellen widersprechen, nenne den Widerspruch kurz. Gibt es nur eine Quelle, nutze sie und sage das "
             + "in einem Halbsatz. Antworte in der Sprache der Frage, sachlich "

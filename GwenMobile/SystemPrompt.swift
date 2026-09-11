@@ -8,6 +8,7 @@ enum SystemPrompt {
         sysText += "\n\n" + L.t("format_hint")
         sysText += "\n\n" + L.t("web_search_prompt")
         sysText += "\n\n" + L.t("web_chart_prompt")
+        sysText += "\n\n" + L.t("memory_prompt")
         return sysText
     }
 

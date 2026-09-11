@@ -1,8 +1,6 @@
 import Foundation
 
 enum FollowUpResolver {
-    static let maxContextMessages = 6
-    static let maxCharsPerMessage = 400
     static let maxQueryChars = 160
     static let selfStandingChars = 34
 
@@ -30,13 +28,7 @@ enum FollowUpResolver {
     }
 
     static func requestMessages(text: String, history: [ChatMessage]) -> [ChatMessage] {
-        let context = history.dropLast()
-            .suffix(maxContextMessages)
-            .map { message in
-                let body = String(message.text.prefix(maxCharsPerMessage)).replacingOccurrences(of: "\n", with: " ")
-                return "\(message.role == .user ? "user" : "assistant"): \(body)"
-            }
-            .joined(separator: "\n")
+        let context = ConversationTranscript.withoutTheNewestQuestion(from: history)
         return [ChatMessage(role: .user, text: "KONTEXT:\n\(context)\n\nNEUE FRAGE:\n\(text)")]
     }
 
@@ -69,6 +61,9 @@ enum FollowUpResolver {
         at most 140 characters, in the language of the user.
         Take the topic from the KONTEXT block and combine it with what the NEUE FRAGE adds (place, time range, \
         subset, comparison). Keep the user's own wording wherever it fits.
+        A KONTEXT line can end with [\(ConversationTranscript.Picture.attached.rawValue)] or \
+        [\(ConversationTranscript.Picture.generated.rawValue)]; that picture is still on screen and the app \
+        passes it along, so name the picture in the query instead of dropping it.
         Examples:
         KONTEXT about causes of climate warming + NEUE FRAGE "und in Deutschland?" \
         -> Hauptursachen der Klimaerwärmung in Deutschland

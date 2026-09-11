@@ -36,6 +36,18 @@ final class SystemPromptTests: XCTestCase {
         XCTAssertNotEqual(ChartMarker.token, SearchMarker.token)
     }
 
+    func testMemoryInstructionIsPartOfTheChatPrompt() {
+        XCTAssertTrue(SystemPrompt.chat().contains(L.t("memory_prompt")))
+        L.apply(.en)
+        XCTAssertTrue(SystemPrompt.chat().contains(L.strings["memory_prompt"]?[.en] ?? "@@missing@@"))
+    }
+
+    func testChartTokenAlwaysMeansANewGraphic() {
+        XCTAssertTrue(L.t("web_chart_prompt").contains("[[CHART]]"))
+        L.apply(.en)
+        XCTAssertTrue(L.t("web_chart_prompt").contains("brand new graphic"))
+    }
+
     func testPromptFollowsActiveLanguage() {
         L.apply(.en)
         XCTAssertTrue(SystemPrompt.chat().contains(L.strings["web_search_prompt"]?[.en] ?? "@@missing@@"))

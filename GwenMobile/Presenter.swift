@@ -10,6 +10,57 @@ enum PresenterError: LocalizedError {
     }
 }
 
+struct ShareCloseRule: Equatable {
+    let activities: Set<UIActivity.ActivityType>
+
+    init(_ activities: Set<UIActivity.ActivityType> = []) {
+        self.activities = activities
+    }
+
+    var tracksHandover: Bool { !activities.isEmpty }
+
+    func closes(on activityType: UIActivity.ActivityType?) -> Bool {
+        guard let activityType else { return false }
+        return activities.contains(activityType)
+    }
+}
+
+final class ShareItemSource: NSObject, UIActivityItemSource {
+    private let url: URL
+    private let onActivity: @Sendable (UIActivity.ActivityType?) -> Void
+
+    init(url: URL, onActivity: @escaping @Sendable (UIActivity.ActivityType?) -> Void) {
+        self.url = url
+        self.onActivity = onActivity
+    }
+
+    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+        url
+    }
+
+    func activityViewController(_ activityViewController: UIActivityViewController,
+                                itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+        onActivity(activityType)
+        return url
+    }
+}
+
+@MainActor
+final class ShareChainCloser {
+    private weak var host: UIViewController?
+
+    init(host: UIViewController) {
+        self.host = host
+    }
+
+    func close() {
+        guard let host, let top = host.presentedViewController, !top.isBeingDismissed else { return }
+        Task { @MainActor in
+            host.dismiss(animated: true)
+        }
+    }
+}
+
 @MainActor
 enum Presenter {
     static var windowRootViewController: UIViewController? {
@@ -25,24 +76,28 @@ enum Presenter {
         return top
     }
 
-    private(set) static weak var activeShareSheet: UIActivityViewController?
-
-    static func share(url: URL) throws {
-        try share(items: [url])
-    }
-
-    static func share(items: [Any]) throws {
+    static func share(url: URL, closesOn activities: Set<UIActivity.ActivityType> = []) throws {
         guard let host = topViewController else { throw PresenterError.noHost }
-        let sheet = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        let rule = ShareCloseRule(activities)
+        let closer = ShareChainCloser(host: host)
+        let sheet = UIActivityViewController(activityItems: itemsForShare(url: url, rule: rule, closer: closer),
+                                             applicationActivities: nil)
         sheet.excludedActivityTypes = [.addToReadingList]
-        sheet.completionWithItemsHandler = { [weak host] _, completed, _, _ in
-            guard completed, host?.presentedViewController != nil else { return }
-            host?.dismiss(animated: true)
+        sheet.completionWithItemsHandler = { _, _, _, _ in
+            Task { @MainActor in closer.close() }
         }
         sheet.popoverPresentationController?.sourceView = host.view
         sheet.popoverPresentationController?.sourceRect =
             CGRect(x: host.view.bounds.midX, y: host.view.bounds.midY, width: 0, height: 0)
-        activeShareSheet = sheet
         host.present(sheet, animated: true)
+    }
+
+    private static func itemsForShare(url: URL, rule: ShareCloseRule,
+                                      closer: ShareChainCloser) -> [Any] {
+        guard rule.tracksHandover else { return [url] }
+        return [ShareItemSource(url: url) { activity in
+            guard rule.closes(on: activity) else { return }
+            Task { @MainActor in closer.close() }
+        }]
     }
 }
