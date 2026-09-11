@@ -47,10 +47,16 @@ Swift 6, strict concurrency, iOS 17+.
   picture arrives in the chat with the data listed as text and the sources as clickable chips.
 - Two independent detection layers, so a chart wish is never missed and a plain question is never
   hijacked: `ChartIntent` decides deterministically on phrasing (needs an explicit chart word such as
-  *Diagramm/Grafik/Chart/plot* **plus** a data or research word, and it honours rejections like
-  "kein Diagramm", "nur als Text"), and the chat model itself can answer with the protocol tokens
+  *Diagramm/Grafik/Chart/plot* **plus** a data or research word, it honours rejections like
+  "kein Diagramm", "nur als Text", and `refersToExistingVisual` keeps it quiet when the chart word only
+  *points at* a graphic already on screen — "die du in dem Diagramm eingetragen hast", "woher hast du
+  die Zahlen für das Diagramm", "welche Werte hast du im Diagramm gezeigt" are questions answered in
+  text, while the same sentence that also asks to produce one ("mach das Diagramm neu mit den Werten
+  von 2025") still draws), and the chat model itself can answer with the protocol tokens
   `[[CHART]]` or `[[SEARCH]][[CHART]]` for everything the phrase lists cannot see. If only the marker
-  fires, no search is done and the numbers come from the model's own knowledge.
+  fires, no search is done and the numbers come from the model's own knowledge; the system prompt
+  spells out that a question about an already shown picture — including where its numbers or sources
+  come from — is answered in text, never with a token.
 - The plan is validated, not trusted: values survive `1,5`, `1.234,56`, `1,234.56`, `42 %` and `12,345`,
   broken points are dropped, fewer than two usable numbers aborts with a hint instead of drawing fiction.
 
@@ -272,7 +278,11 @@ raw `**` survived — report in `Documents/export_probe.txt`) and `airdropprobe`
 path, then the presentation chain is polled until it is gone — `Documents/airdrop_probe.txt`
 reports every chain change and ends with `chatSichtbarWieder=true` once the AirDrop hand-over
 closes the sheet and the AirDrop window by itself),
-`menushow` (opens the "+" menu and leaves it open, for screenshots), plus a bare
+`menushow` (opens the "+" menu and leaves it open, for screenshots), `chartguard` (real conversation:
+answer → "mach daraus ein diagramm" → then the three follow-ups "woher hast du die Statistik, die du in
+dem Diagramm eingetragen hast", "welche Werte hast du im Diagramm eingetragen" and the positive control
+"mach das diagramm bitte neu mit den werten von 2025" — passing is `bilder=0` for the two questions and
+`bilder=1` for the control, report in `Documents/chart_guard.txt`), plus a bare
 `gwenmobile://test/<attachment-file-name>` for a single image. They assume the conversations and image files of the reference
 device exist in the app sandbox (`img_0B85747A-BAA.jpg`, `img_7924D952-6BF.jpg`) and
 log to the `flow` os-log subsystem. Release builds contain none of this code

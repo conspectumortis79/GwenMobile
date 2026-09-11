@@ -249,6 +249,35 @@ extension ChatView {
         UIApplication.shared.isIdleTimerDisabled = false
     }
 
+    func runChartGuardProbe() async {
+        UIApplication.shared.isIdleTimerDisabled = true
+        var report = SweepReport()
+        store.newConversation()
+        input = "Wie viele Einwohner hat Deutschland und Österreich in den letzten Jahren jeweils gehabt?"
+        await send()
+        let basis = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("GUET_BASIS", "zeichen=\(basis?.text.count ?? -1) quellen=\(basis?.sources?.count ?? -1)")
+        input = "mach daraus ein diagramm"
+        await send()
+        let chart = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("GUET_DIAGRAMM", "bilder=\(chart?.outImages?.count ?? 0)")
+        let rueckfragen = [
+            "Ich will wissen, woher du die Statistik für Österreich hast, die du in dem Diagramm eingetragen hast.",
+            "Weißt du noch, welche Werte du eingetragen hast im Diagramm? Bitte zeige sie mir.",
+            "mach das diagramm bitte neu mit den werten von 2025"
+        ]
+        for (lauf, frage) in rueckfragen.enumerated() {
+            input = frage
+            await send()
+            let answer = store.current?.messages.last(where: { $0.role == .assistant })
+            report.add("GUET_FRAGE\(lauf)", "bilder=\(answer?.outImages?.count ?? 0) "
+                       + "zeichen=\(answer?.text.count ?? -1) text=\(Self.oneLine(answer?.text ?? ""))")
+        }
+        report.write(into: "chart_guard.txt")
+        flowLog.info("CHARTGUARD bericht geschrieben")
+        UIApplication.shared.isIdleTimerDisabled = false
+    }
+
     func runExportProbe() async {
         UIApplication.shared.isIdleTimerDisabled = true
         var report = SweepReport()

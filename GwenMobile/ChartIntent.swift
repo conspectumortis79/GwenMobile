@@ -25,10 +25,28 @@ enum ChartIntent {
                                                  "without a chart", "don't chart", "dont chart", "don't plot",
                                                  "dont plot", "nur text", "nur als text", "nur eine antwort"])
 
+    static let creationVerb = PhraseMatch(phrases: ["mach", "erstell", "erzeug", "baue", "visualisier",
+                                                    "veranschaulich", "make", "create", "generate", "build",
+                                                    "plot", "draw", "chart it"])
+
+    static let existingVisual = PhraseMatch(phrases: ["im diagramm", "in dem diagramm", "dem diagramm", "das diagramm",
+                                                      "dein diagramm", "diesem diagramm", "diagramm gezeigt",
+                                                      "diagramm eingezeichnet", "diagramm eingetragen", "diagramm genutzt",
+                                                      "diagramm dargestellt", "im graf", "in der grafik", "der grafik",
+                                                      "im chart", "in dem chart", "the chart", "this chart",
+                                                      "your chart", "in the chart", "the graph", "this graph",
+                                                      "your graph", "the visualisation", "the visualization"])
+
     static func looksLikeChartRequest(_ text: String) -> Bool {
         let t = text.lowercased()
         guard visualSignal.matches(t), !rejection.matches(t) else { return false }
+        guard !refersToExistingVisual(t) else { return false }
         return dataSignal.matches(t) || webSignal.matches(t)
+    }
+
+    static func refersToExistingVisual(_ lowered: String) -> Bool {
+        guard existingVisual.matches(lowered) else { return false }
+        return !(creationVerb.matches(lowered) && visualSignal.matches(lowered))
     }
 
     static func wantsWebData(_ text: String) -> Bool {

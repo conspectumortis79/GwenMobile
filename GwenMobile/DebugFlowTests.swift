@@ -25,6 +25,10 @@ extension ChatView {
             await runChartProbe()
             return
         }
+        if name == "chartguard" {
+            await runChartGuardProbe()
+            return
+        }
         if name == "searchonce" {
             await runSearchOnceProbe()
             return
