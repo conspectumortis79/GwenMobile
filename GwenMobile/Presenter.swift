@@ -23,8 +23,12 @@ enum Presenter {
     }
 
     static func share(url: URL) throws {
+        try share(items: [url])
+    }
+
+    static func share(items: [Any]) throws {
         guard let host = topViewController else { throw PresenterError.noHost }
-        let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        let sheet = UIActivityViewController(activityItems: items, applicationActivities: nil)
         sheet.excludedActivityTypes = [.addToReadingList]
         sheet.popoverPresentationController?.sourceView = host.view
         sheet.popoverPresentationController?.sourceRect =

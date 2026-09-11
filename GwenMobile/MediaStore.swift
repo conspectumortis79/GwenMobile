@@ -39,6 +39,11 @@ final class MediaStore: @unchecked Sendable {
         fileManager.contents(atPath: paths.image(attachment.file).path)
     }
 
+    func storedURL(for attachment: Attachment) -> URL? {
+        let url = paths.imageURL(for: attachment)
+        return fileManager.fileExists(atPath: url.path) ? url : nil
+    }
+
     func data(named file: String) -> Data? {
         fileManager.contents(atPath: paths.image(file).path)
     }

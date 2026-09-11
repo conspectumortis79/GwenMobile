@@ -57,6 +57,17 @@ enum QwenAPI {
         return obj.answerText
     }
 
+    static func resolveQuery(baseURL: String, key: String, model: String,
+                             history: [ChatMessage]) async throws -> String? {
+        guard let last = history.last?.text.trimmingCharacters(in: .whitespacesAndNewlines), !last.isEmpty else {
+            return nil
+        }
+        let req = try makeRequest(baseURL: baseURL, key: key, model: model,
+                                  messages: FollowUpResolver.requestMessages(text: last, history: history),
+                                  imageData: [], stream: false, system: FollowUpResolver.instructions())
+        return try await askText(req)
+    }
+
     static func fetchModelsRequest(baseURL: String, key: String) throws -> URLRequest {
         guard let url = HTTP.endpoint(baseURL, APIEndpoint.models) else {
             throw APIError(message: L.t("bad_url"))

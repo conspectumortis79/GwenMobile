@@ -49,7 +49,9 @@ enum ChartPlanner {
         from your own knowledge while a DATA block is present.
         - If the DATA block is missing a number you need, leave that point out. If fewer than two numbers are \
         available, answer {"kind":"bar","points":[]}.
-        - 2 to 8 points, in the order the data gives them (chronological for a time series).
+        - 2 to 8 points, in the order the data gives them (chronological for a time series). Prefer 4 to 8 \
+        points whenever the data offers them: use every year or category that carries a number, never stop at \
+        the first and the last value only.
         - kind: bar for comparisons, line or area for developments over time, pie for shares of one whole, \
         scatter for paired measurements.
         - "value" is a plain decimal number with a dot as the decimal sign, no thousands separator, no unit, \

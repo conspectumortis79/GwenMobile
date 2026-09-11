@@ -36,6 +36,20 @@ final class StorageTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: media.paths.trash.path))
     }
 
+    func testStoredURLPointsAtTheRealFileOrNilWhenGone() throws {
+        let media = makeMedia()
+        media.prepareDirectories()
+        let payload = Data([0xFF, 0xD8, 0xFF, 0xD9])
+        let name = try XCTUnwrap(media.storeImageData(payload))
+        let att = Attachment(file: name)
+        let url = try XCTUnwrap(media.storedURL(for: att))
+        XCTAssertEqual(url.path, media.paths.imageURL(for: att).path)
+        XCTAssertEqual(url.pathExtension, "jpg")
+        XCTAssertEqual(try Data(contentsOf: url), payload)
+        media.removeImage(named: name)
+        XCTAssertNil(media.storedURL(for: att))
+    }
+
     func testStoreImageDataKeepsSmallPayloadByteForByte() throws {
         let media = makeMedia()
         media.prepareDirectories()

@@ -27,4 +27,24 @@ struct WebResearch {
     static func sources(from hits: [WebHit]) -> [WebSource] {
         hits.map { WebSource(title: $0.title, url: $0.url, domain: $0.domain) }
     }
+
+    static func priorResearch(from history: [ChatMessage],
+                              limit: Int = ChartPlanner.maxDataChars) -> (digest: String, sources: [WebSource]) {
+        let answers = history.filter { $0.role == .assistant && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        var digest = ""
+        var sources: [WebSource] = []
+        for answer in answers.suffix(maxPriorAnswers) {
+            let refs = (answer.sources ?? []).enumerated()
+                .map { "Quelle [\($0.offset + 1)] \($0.element.title) — \($0.element.domain) \($0.element.url)" }
+                .joined(separator: "\n")
+            digest += "## Gespeicherte Antwort\n\(answer.text)\n"
+            if !refs.isEmpty { digest += "\n## Gefundene Quellen\n\(refs)\n" }
+            digest += "\n"
+            if let last = answer.sources, !last.isEmpty { sources = last }
+            if digest.count >= limit { break }
+        }
+        return (String(digest.prefix(limit)), sources)
+    }
+
+    static let maxPriorAnswers = 2
 }

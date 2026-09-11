@@ -78,11 +78,53 @@ extension ChatView {
         await send()
         let uiAnswer = store.current?.messages.last(where: { $0.role == .assistant })
         report.add("UI_SUCHE", "quellen=\(uiAnswer?.sources?.count ?? -1) zeichen=\(uiAnswer?.text.count ?? -1) anfang=\(prefix(uiAnswer?.text ?? ""))")
+        report.add("UI_SUCHE_KAPSEL", "danach=\(webStatus ?? "nil")")
         store.newConversation()
         input = "Was ist die Hauptstadt von Frankreich?"
         await send()
         let uiPlain = store.current?.messages.last(where: { $0.role == .assistant })
         report.add("UI_WISSEN", "quellen=\(uiPlain?.sources?.count ?? -1) zeichen=\(uiPlain?.text.count ?? -1) anfang=\(prefix(uiPlain?.text ?? ""))")
+
+        do {
+            let followUp = [ChatMessage(role: .user, text: "Was sind die Hauptursachen der Klimaerwärmung?"),
+                            ChatMessage(role: .assistant,
+                                        text: "Die Hauptursachen sind die Verbrennung von Kohle, Öl und Gas, Industrie, Landwirtschaft und Abholzung."),
+                            ChatMessage(role: .user, text: "und in Deutschland?")]
+            report.add("KONTEXT_ERKENNT",
+                       "notwendig=\(FollowUpResolver.needsContext("und in Deutschland?"))"
+                       + " alleinstehend=\(FollowUpResolver.needsContext("Was ist die Hauptstadt von Frankreich?"))")
+            for lauf in 1...3 {
+                let raw = try await QwenAPI.resolveQuery(baseURL: baseURL, key: key,
+                                                         model: settings.chatModel, history: followUp)
+                let query = FollowUpResolver.sanitize(raw ?? "")
+                report.add("KONTEXT_FRAGE\(lauf)",
+                           "nutzbar=\(FollowUpResolver.isUsable(query, insteadOf: "und in Deutschland?")) abfrage=\(query)")
+            }
+        } catch { report.addFailure("KONTEXT_FRAGE", error) }
+
+        store.newConversation()
+        input = "Wie viele Einwohner hat Deutschland in den letzten Jahren jeweils gehabt?"
+        await send()
+        let role1 = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("KONTEXT_ROLLE1", "zeichen=\(role1?.text.count ?? -1) quellen=\(role1?.sources?.count ?? -1) anfang=\(prefix(role1?.text ?? ""))")
+        input = "mach daraus ein diagramm"
+        await send()
+        let chartFromAnswer = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("KONTEXT_DIAGRAMM_DARAUS", "bilder=\(chartFromAnswer?.outImages?.count ?? -1) zeichen=\(chartFromAnswer?.text.count ?? -1) quellen=\(chartFromAnswer?.sources?.count ?? -1) anfang=\(prefix(chartFromAnswer?.text ?? ""))")
+
+        store.newConversation()
+        input = "Was ist die Hauptstadt von Frankreich?"
+        await send()
+        input = "Und in Österreich?"
+        await send()
+        let shortFollow = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("KONTEXT_KURZFRAGE", "zeichen=\(shortFollow?.text.count ?? -1) quellen=\(shortFollow?.sources?.count ?? -1) anfang=\(prefix(shortFollow?.text ?? ""))")
+
+        store.newConversation()
+        input = "Such im Internet nach dem Stromverbrauch in Deutschland und stell die Werte als Diagramm dar"
+        await send()
+        let webChart = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("KETTE_SUCHE_DIAGRAMM", "bilder=\(webChart?.outImages?.count ?? -1) zeichen=\(webChart?.text.count ?? -1) quellen=\(webChart?.sources?.count ?? -1) anfang=\(prefix(webChart?.text ?? ""))")
 
         let status = EKEventStore.authorizationStatus(for: .event)
         report.add("KALENDER_RECHT", "status=\(status.rawValue)")
@@ -156,6 +198,126 @@ extension ChatView {
         await Task.detached(priority: .userInitiated) {
             MediaStore.thumbnail(data, maxPixel: ImagePolicy.uploadMaxPixel)
         }.value
+    }
+
+    func runAirDropProbe() async {
+        UIApplication.shared.isIdleTimerDisabled = true
+        var report = SweepReport()
+        var attachments = store.conversations.flatMap { c in c.messages.flatMap { $0.outImages ?? [] } }
+        report.add("AIRDROP_VERLAUF", "bilder=\(attachments.count)")
+        if attachments.isEmpty {
+            store.newConversation()
+            input = "Erzeuge ein Bild von einer roten Tasse auf einem Holztisch"
+            await send()
+            attachments = store.current?.messages.flatMap { $0.outImages ?? [] } ?? []
+            report.add("AIRDROP_ERZEUGT", "bilder=\(attachments.count)")
+        }
+        if let att = attachments.last, let url = store.media.storedURL(for: att) {
+            let bytes = (try? Data(contentsOf: url))?.count ?? -1
+            report.add("AIRDROP_DATEI", "name=\(url.lastPathComponent) endung=\(url.pathExtension) bytes=\(bytes)")
+            do {
+                try Presenter.share(items: [url])
+                report.add("AIRDROP_FENSTER", "geoeffnet")
+            } catch { report.addFailure("AIRDROP_FENSTER", error) }
+        } else {
+            report.add("AIRDROP_DATEI", "keinBildGefunden")
+        }
+        report.write(into: "airdrop_probe.txt")
+        flowLog.info("AIRDROPPROBE bericht geschrieben")
+        UIApplication.shared.isIdleTimerDisabled = false
+    }
+
+    func runExportProbe() async {
+        UIApplication.shared.isIdleTimerDisabled = true
+        var report = SweepReport()
+        store.newConversation()
+        input = "Was ist die Hauptstadt von Frankreich? Nenne zwei Meilensteine mit Quellen."
+        await send()
+        let messages = store.current?.messages ?? []
+        guard let answer = messages.last(where: { $0.role == .assistant }) else {
+            report.add("EXPORT_DATEI", "keineAntwort")
+            report.write(into: "export_probe.txt")
+            UIApplication.shared.isIdleTimerDisabled = false
+            return
+        }
+        let question = Self.question(for: answer, in: messages) ?? ""
+        report.add("EXPORT_FRAGE", "frage=\(question) antwortzeichen=\(answer.text.count) quellen=\(answer.sources?.count ?? -1)")
+        do {
+            let url = try AnswerExporter().write(text: answer.text, sources: answer.sources ?? [],
+                                                 question: question, model: answer.model,
+                                                 elapsed: answer.elapsed, time: Self.timeString(answer.date))
+            let html = try String(contentsOf: url, encoding: .utf8)
+            report.add("EXPORT_DATEI", "name=\(url.lastPathComponent) bytes=\(html.utf8.count) "
+                       + "htmlAbschnitte=\(html.components(separatedBy: "<p>").count - 1) "
+                       + "fett=\(html.contains("<strong>")) rohesMarkdown=\(html.contains("**")) "
+                       + "links=\(html.components(separatedBy: "<a href=\"").count - 1)")
+            try Presenter.share(url: url)
+        } catch { report.addFailure("EXPORT_DATEI", error) }
+        report.write(into: "export_probe.txt")
+        flowLog.info("EXPORTPROBE bericht geschrieben")
+        UIApplication.shared.isIdleTimerDisabled = false
+    }
+
+    func runSearchOnceProbe() async {
+        UIApplication.shared.isIdleTimerDisabled = true
+        var report = SweepReport()
+        store.newConversation()
+        input = "Wie viele Arbeitslose gab es in Deutschland in den letzten zwei Jahren?"
+        await send()
+        let answer = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("SUCHE_ONCE", "zeichen=\(answer?.text.count ?? -1) quellen=\(answer?.sources?.count ?? -1) "
+                   + "nachrichten=\(store.current?.messages.count ?? -1) kapsel=\(webStatus ?? "nil")")
+        report.write(into: "search_once.txt")
+        flowLog.info("SEARCHONCE bericht geschrieben")
+        UIApplication.shared.isIdleTimerDisabled = false
+    }
+
+    func runChartProbe() async {
+        UIApplication.shared.isIdleTimerDisabled = true
+        var report = SweepReport()
+
+        store.newConversation()
+        input = "Wie viele Einwohner hat Deutschland in den letzten Jahren jeweils gehabt?"
+        await send()
+        let prior = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("PROBE_ROLLE1", "zeichen=\(prior?.text.count ?? -1) quellen=\(prior?.sources?.count ?? -1)")
+        input = "mach daraus ein diagramm"
+        await send()
+        let chart = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("PROBE_DARAUS",
+                   "punkte=\(Self.dataPoints(chart?.text ?? "")) bilder=\(chart?.outImages?.count ?? -1) "
+                   + "quellen=\(chart?.sources?.count ?? -1) text=\(Self.oneLine(chart?.text ?? ""))")
+
+        store.newConversation()
+        input = "Wie hoch ist die Arbeitslosenquote in Deutschland gerade?"
+        await send()
+        let first = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("PROBE_SUCHE1", "zeichen=\(first?.text.count ?? -1) quellen=\(first?.sources?.count ?? -1)")
+        input = "und in österreich?"
+        await send()
+        let second = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("PROBE_SUCHE2", "zeichen=\(second?.text.count ?? -1) quellen=\(second?.sources?.count ?? -1) "
+                   + "text=\(Self.oneLine(second?.text ?? ""))")
+
+        store.newConversation()
+        input = "Such im Internet nach dem Stromverbrauch in Deutschland und stell die Werte als Diagramm dar"
+        await send()
+        let chain = store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("PROBE_KETTE",
+                   "punkte=\(Self.dataPoints(chain?.text ?? "")) bilder=\(chain?.outImages?.count ?? -1) "
+                   + "quellen=\(chain?.sources?.count ?? -1) text=\(Self.oneLine(chain?.text ?? ""))")
+
+        report.write(into: "chart_probe.txt")
+        flowLog.info("CHARTPROBE bericht geschrieben")
+        UIApplication.shared.isIdleTimerDisabled = false
+    }
+
+    private static func dataPoints(_ text: String) -> Int {
+        text.components(separatedBy: "\n").filter { $0.hasPrefix("- ") }.count
+    }
+
+    private static func oneLine(_ text: String) -> String {
+        String(text.prefix(130)).replacingOccurrences(of: "\n", with: " ")
     }
 
     private func prefix(_ text: String) -> String {

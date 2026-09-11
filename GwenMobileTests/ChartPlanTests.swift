@@ -136,6 +136,8 @@ final class ChartPlanTests: XCTestCase {
         let system = try XCTUnwrap(messages.first?["content"] as? String)
         XCTAssertTrue(system.contains("ONLY one JSON object"))
         XCTAssertTrue(system.contains("\"points\""))
+        XCTAssertTrue(system.contains("Prefer 4 to 8"))
+        XCTAssertTrue(system.contains("Never estimate"))
     }
 
     func testRequestWithoutDataKeepsOnlyTheQuestion() throws {

@@ -21,6 +21,22 @@ extension ChatView {
             await runSweep()
             return
         }
+        if name == "chartprobe" {
+            await runChartProbe()
+            return
+        }
+        if name == "searchonce" {
+            await runSearchOnceProbe()
+            return
+        }
+        if name == "exportprobe" {
+            await runExportProbe()
+            return
+        }
+        if name == "airdropprobe" {
+            await runAirDropProbe()
+            return
+        }
         let all = store.conversations.flatMap { c in c.messages.flatMap { $0.images + ($0.outImages ?? []) } }
         if name == "typetest" || name == "scrolltest" {
             UIApplication.shared.isIdleTimerDisabled = true

@@ -24,7 +24,7 @@ struct ChatView: View {
     @State private var imageWorking = false
     @State private var workingIsEdit = false
     @State private var workingLabelOverride: String? = nil
-    @State private var webStatus: String? = nil
+    @State var webStatus: String? = nil
     @FocusState var inputFocused: Bool
 
     #if DEBUG
@@ -213,6 +213,7 @@ struct ChatView: View {
                                 dayLabel(date)
                             case .msg(let msg):
                                 Bubble(message: msg, media: store.media,
+                                       question: Self.question(for: msg, in: conv.messages),
                                        time: Self.timeString(msg.date),
                                        isLast: msg.id == lastID && !isStreaming,
                                        width: threadWidth,
@@ -223,7 +224,7 @@ struct ChatView: View {
                         }
                     }
                     if isStreaming {
-                        Bubble(text: streamText, isUser: false, streaming: true)
+                        Bubble(text: streamText, isUser: false, question: liveQuestion, streaming: true)
                             .id("streaming")
                     }
                     if voice.state == .processing {
@@ -296,6 +297,16 @@ struct ChatView: View {
             case .msg(let m): return "msg-\(m.id.uuidString)"
             }
         }
+    }
+
+    private var liveQuestion: String? {
+        store.current?.messages.last(where: { $0.role == .user })?.text
+    }
+
+    static func question(for message: ChatMessage, in messages: [ChatMessage]) -> String? {
+        guard message.role == .assistant,
+              let index = messages.firstIndex(where: { $0.id == message.id }) else { return nil }
+        return messages.prefix(index).last(where: { $0.role == .user })?.text.nilIfEmpty
     }
 
     static func makeRows(_ msgs: [ChatMessage]) -> [ThreadRow] {
@@ -584,10 +595,12 @@ struct ChatView: View {
         case .calendar:
             await runCalendarFlow(text: text, history: history, convID: convID, started: started)
         case .chart(let webData):
+            let question = await standaloneQuestion(history)
             if webData {
-                await runWebChartFlow(question: text, convID: convID, started: started)
+                await runWebChartFlow(question: question, convID: convID, started: started)
             } else {
-                await runChartFlow(question: text, hits: [], convID: convID, started: started)
+                await runChartFlow(question: question, hits: [], history: history,
+                                   convID: convID, started: started)
             }
         case .chat:
             await streamChat(history: history, convID: convID, started: started)
@@ -674,6 +687,22 @@ struct ChatView: View {
         }
     }
 
+    @MainActor private func standaloneQuestion(_ history: [ChatMessage]) async -> String {
+        guard let raw = history.last?.text.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+            return ""
+        }
+        guard history.count > 1, FollowUpResolver.needsContext(raw) else { return raw }
+        let rewritten = try? await QwenAPI.resolveQuery(baseURL: settings.baseURL, key: settings.apiKey,
+                                                       model: settings.chatModel, history: history)
+        let query = rewritten.map { FollowUpResolver.sanitize($0) }
+        guard let query, FollowUpResolver.isUsable(query, insteadOf: raw) else {
+            flowMark("CTX keep frage=\(raw.prefix(60))")
+            return raw
+        }
+        flowMark("CTX rewrite frage=\(raw.prefix(40))\u{2192} frage=\(query.prefix(90))")
+        return query
+    }
+
     @MainActor private func gatherWebHits(_ question: String) async throws -> [WebHit] {
         webStatus = L.t("web_searching")
         defer { webStatus = nil }
@@ -691,21 +720,24 @@ struct ChatView: View {
         }
     }
 
-    @MainActor private func runChartFlow(question: String, hits: [WebHit], convID: UUID, started: Date) async {
+    @MainActor private func runChartFlow(question: String, hits: [WebHit], history: [ChatMessage] = [],
+                                         convID: UUID, started: Date) async {
         imageWorking = true
         workingLabelOverride = L.t("making_chart")
         defer { imageWorking = false; workingLabelOverride = nil }
         let chatModel = settings.chatModel
         let imageModel = settings.imageModel
         let media = store.media
-        let sources = WebResearch.sources(from: hits)
+        let prior = WebResearch.priorResearch(from: history)
+        let digest = hits.isEmpty ? prior.digest : WebResearch.dataDigest(from: hits)
+        let sources = hits.isEmpty ? prior.sources : WebResearch.sources(from: hits)
         do {
             guard let plan = try await ChartPlanner.plan(baseURL: settings.baseURL, key: settings.apiKey,
                                                          model: chatModel, question: question,
-                                                         data: WebResearch.dataDigest(from: hits)) else {
+                                                         data: digest) else {
                 throw APIError(message: L.t("chart_no_data"))
             }
-            flowMark("CHART plan kind=\(plan.kind.rawValue) points=\(plan.points.count) web=\(hits.count)")
+            flowMark("CHART plan kind=\(plan.kind.rawValue) points=\(plan.points.count) web=\(hits.count) daten=\(digest.count)")
             let req = try QwenAPI.makeImageRequest(baseURL: settings.baseURL, key: settings.apiKey,
                                                    model: imageModel, prompt: plan.imagePrompt(),
                                                    inputImages: [], isEdit: false)
@@ -764,15 +796,16 @@ struct ChatView: View {
             let full = try await ChatRunner.shared.run(req) { chunk in throttle.receive(chunk) }
             throttle.cancel()
             streamText = ""
-            let question = history.last?.text ?? ""
             let markers = ChatMarkers.parse(full)
             if !markers.isEmpty {
                 isStreaming = false
+                let question = await standaloneQuestion(history)
                 if markers.search {
                     try await runWebSearch(question: question, convID: convID, started: started,
-                                           chart: markers.chart)
+                                           chart: markers.chart, history: history)
                 } else {
-                    await runChartFlow(question: question, hits: [], convID: convID, started: started)
+                    await runChartFlow(question: question, hits: [], history: history,
+                                       convID: convID, started: started)
                 }
                 return
             }
@@ -798,17 +831,18 @@ struct ChatView: View {
         }
     }
 
-    @MainActor func runWebSearch(question: String, convID: UUID, started: Date, chart: Bool = false) async throws {
+    @MainActor func runWebSearch(question: String, convID: UUID, started: Date,
+                                 chart: Bool = false, history: [ChatMessage] = []) async throws {
         let chatModel = settings.chatModel
         do {
             let hits = try await gatherWebHits(question)
             if chart {
-                await runChartFlow(question: question, hits: hits, convID: convID, started: started)
+                await runChartFlow(question: question, hits: hits, history: history,
+                                   convID: convID, started: started)
                 return
             }
             let req = try WebSearch.makeAnswerRequest(baseURL: settings.baseURL, key: settings.apiKey,
                                                       model: chatModel, question: question, hits: hits)
-            webStatus = L.t("web_searching")
             isStreaming = true
             streamText = ""
             let throttle = StreamThrottle { chunk in streamText += chunk }

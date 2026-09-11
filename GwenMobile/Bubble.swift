@@ -16,6 +16,7 @@ struct Bubble: View, Equatable {
 
     let text: String
     let isUser: Bool
+    var question: String? = nil
     var streaming: Bool = false
     var images: [Attachment] = []
     var outImages: [Attachment] = []
@@ -30,14 +31,16 @@ struct Bubble: View, Equatable {
     var sources: [WebSource] = []
     let media: MediaStore?
     @State private var savedNote: String?
-    @State private var exportNote: String?
+    @State private var shareFailure: String?
 
-    init(message: ChatMessage, media: MediaStore, time: String? = nil, isLast: Bool = false,
+    init(message: ChatMessage, media: MediaStore, question: String? = nil, time: String? = nil,
+         isLast: Bool = false,
          width: CGFloat = 360,
          onEdit: ((Attachment) -> Void)? = nil,
          onDelete: ((UUID) -> Void)? = nil) {
         self.text = message.text
         self.isUser = message.role == .user
+        self.question = question
         self.images = message.images
         self.outImages = message.outImages ?? []
         self.model = message.model
@@ -52,9 +55,10 @@ struct Bubble: View, Equatable {
         self.media = media
     }
 
-    init(text: String, isUser: Bool, streaming: Bool = false) {
+    init(text: String, isUser: Bool, question: String? = nil, streaming: Bool = false) {
         self.text = text
         self.isUser = isUser
+        self.question = question
         self.streaming = streaming
         self.media = nil
         self.messageID = nil
@@ -62,6 +66,7 @@ struct Bubble: View, Equatable {
 
     nonisolated static func == (lhs: Bubble, rhs: Bubble) -> Bool {
         lhs.text == rhs.text && lhs.isUser == rhs.isUser && lhs.streaming == rhs.streaming
+            && lhs.question == rhs.question
             && lhs.images == rhs.images && lhs.outImages == rhs.outImages
             && lhs.model == rhs.model && lhs.elapsed == rhs.elapsed && lhs.time == rhs.time
             && lhs.isLast == rhs.isLast && lhs.sources == rhs.sources
@@ -79,6 +84,11 @@ struct Bubble: View, Equatable {
                         VStack(alignment: isUser ? .trailing : .leading, spacing: 6) {
                             ForEach(images, id: \.file) { att in
                                 AttachmentImage(att: att)
+                                    .contextMenu {
+                                        Button { shareImage(att) } label: {
+                                            Label(L.t("send_via_airdrop"), systemImage: "paperplane")
+                                        }
+                                    }
                             }
                         }
                     }
@@ -87,6 +97,9 @@ struct Bubble: View, Equatable {
                             ForEach(outImages, id: \.file) { att in
                                 AttachmentImage(att: att, fit: true)
                                     .contextMenu {
+                                        Button { shareImage(att) } label: {
+                                            Label(L.t("send_via_airdrop"), systemImage: "paperplane")
+                                        }
                                         Button { saveAttachment(att) } label: {
                                             Label(L.t("save_to_photos"), systemImage: "square.and.arrow.down")
                                         }
@@ -167,21 +180,34 @@ struct Bubble: View, Equatable {
             }
         }
         .alert(L.t("error"), isPresented: Binding(
-            get: { exportNote != nil },
-            set: { if !$0 { exportNote = nil } }
+            get: { shareFailure != nil },
+            set: { if !$0 { shareFailure = nil } }
         )) {
-            Button(L.t("ok"), role: .cancel) { exportNote = nil }
+            Button(L.t("ok"), role: .cancel) { shareFailure = nil }
         } message: {
-            Text(verbatim: exportNote ?? "")
+            Text(verbatim: shareFailure ?? "")
         }
     }
 
     private func saveAsFile() {
         do {
-            try Presenter.share(url: AnswerExporter().write(text: text, sources: sources))
+            try Presenter.share(url: AnswerExporter().write(text: text, sources: sources, question: question,
+                                                            model: model, elapsed: elapsed, time: time))
             savedNote = L.t("answers_saved")
         } catch {
-            exportNote = error.localizedDescription
+            shareFailure = error.localizedDescription
+        }
+    }
+
+    private func shareImage(_ att: Attachment) {
+        guard let url = media?.storedURL(for: att) else {
+            shareFailure = L.t("image_gone")
+            return
+        }
+        do {
+            try Presenter.share(items: [url])
+        } catch {
+            shareFailure = error.localizedDescription
         }
     }
 

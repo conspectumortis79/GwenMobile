@@ -21,10 +21,17 @@ Swift 6, strict concurrency, iOS 17+.
   (`Verarbeite` / `Processing`, or the specific task such as `Erzeuge Bild`,
   `Kümmere mich um den Termin`, `Ich suche im Internet`) plus three dots that count up
   0 → 1 → 2 → 3 every 2 s, in place of any spinning wheel
-- Long-press any answer to store it as a Markdown file: it lands in `Documents/answers`
-  (visible in the Files app under *GwenMobile*, the app has file sharing enabled) and the
-  iOS share sheet opens as well, so it can go to Files, Mail or AirDrop in the same tap.
-  Sources of a web-search answer are appended as a numbered `## Quellen` section
+- Long-press any answer to store it as a file: the export is **rendered HTML**, not the raw
+  markdown the model produced — bold, italics, inline code, lists, headings, links and the
+  numbered source list all show up formatted, in light and dark appearance, and the file prints
+  to PDF straight from the share sheet. The file is named after the **user's question**
+  (letters and digits only, no `?`, `!`, quotes or emoji, first nine words), so
+  `Was ist die Hauptstadt von Frankreich?` becomes `Was ist die Hauptstadt von Frankreich.html`;
+  a name clash gets `… 2.html`, and a message without a question falls back to
+  `antwort-2026-09-11-133827.html`.
+- Files land in `Documents/answers` (visible in the Files app under *GwenMobile*, the app has file
+  sharing enabled) and the iOS share sheet opens in the same tap, so they can go to Files, Mail,
+  Notes or AirDrop
 
 <img src="docs/screenshots/01-chat.png" alt="GwenMobile after launch: empty conversation, header with app icon and title, input bar with plus, mic and send" width="270"> <img src="docs/screenshots/02-plus-menu.png" alt="The plus menu opened above the input bar: Attach photo, Camera and Read aloud with its OFF state" width="270">
 
@@ -44,6 +51,20 @@ Swift 6, strict concurrency, iOS 17+.
   fires, no search is done and the numbers come from the model's own knowledge.
 - The plan is validated, not trusted: values survive `1,5`, `1.234,56`, `1,234.56`, `42 %` and `12,345`,
   broken points are dropped, fewer than two usable numbers aborts with a hint instead of drawing fiction.
+
+### Follow-ups understand the conversation
+- "Was sind die Hauptursachen der Klimaerwärmung?" → answer → **"und in Deutschland?"** works in every
+  flow, not just in plain chat. Before a web search or a chart is planned, `FollowUpResolver` decides
+  deterministically whether the message can stand alone (anaphora such as *und in / daraus / davon /
+  what about / your answer*, or a bare fragment), and only then asks the model for one standalone
+  search query ("Hauptursachen der Klimaerwärmung in Deutschland"). That query is what
+  `WebSearch.search`, `WebSearch.makeAnswerRequest` and `ChartPlanner` actually receive.
+- "mach daraus ein diagramm" after a researched answer: the previous answer plus its source list become
+  the `## DATA` block, so the chart is drawn from the numbers the app just showed — not from the model's
+  memory. Without any prior research the planner still falls back to the model's own knowledge, and a
+  rewrite that is unusable (too short, a refusal, identical to the original) is discarded in favour of
+  the user's own words.
+- Rewrites are logged on device as `CTX rewrite frage=…→ frage=…` in `Documents/flow_trace.txt`.
 
 ### Images
 - Attach photos from camera or gallery; the vision model (e.g. qwen3.8-max) sees them
@@ -66,6 +87,15 @@ Swift 6, strict concurrency, iOS 17+.
   the previous result is picked up as the input image, no re-attaching
 - Long-press any generated image → "Edit" to send it back into the input bar
 - Save results to the Photos app (button or context menu)
+
+### Sharing pictures
+- Long-press any picture in the chat — generated or attached — and choose
+  **„Per AirDrop senden"**: the system share sheet opens with AirDrop in the front row, so the
+  image goes straight to another Mac, iPhone or iPad without first saving it to the photo library
+  (the sheet also offers Messages, Mail, Notes, „In Dateien sichern" and printing).
+- What is handed over is the stored JPEG file itself, not a re-encoded thumbnail, so the
+  receiver gets the same bytes the app shows. If the file has been cleaned away in the meantime,
+  the app says so instead of sharing an empty attachment.
 
 ### Histories and storage
 - The header's list button opens "Verläufe": every conversation with its date, message
@@ -201,7 +231,14 @@ written), image editing, text-to-image, cloud TTS, ASR transport
 Debug builds answer the URL scheme `gwenmobile://test/<scenario>` and drive the real
 chat UI on the device (perf regressions for typing, scrolling and image edit).
 Scenarios: `typetest`, `scrolltest`, `camtypetest`, `camflow`, `followup`,
-`tripleedit`, `bigedit`, `reopenbig`, `editbig`, `camtrans`, plus a bare
+`tripleedit`, `bigedit`, `reopenbig`, `editbig`, `camtrans`, `chartprobe` (real web search,
+follow-up rewrite and chart generation, report in `Documents/chart_probe.txt`) and
+`searchonce` (one researched answer, then asserts the "Ich suche im Internet" capsule is gone —
+report in `Documents/search_once.txt`, `kapsel=nil` is the passing state) and `exportprobe`
+(real answer, then the rendered export: file name, `<strong>`/`<p>`/`<a href>` counts and whether any
+raw `**` survived — report in `Documents/export_probe.txt`) and `airdropprobe`
+(stored JPEG of the newest chat picture handed to the share sheet — `Documents/airdrop_probe.txt`),
+plus a bare
 `gwenmobile://test/<attachment-file-name>` for a single image. They assume the conversations and image files of the reference
 device exist in the app sandbox (`img_0B85747A-BAA.jpg`, `img_7924D952-6BF.jpg`) and
 log to the `flow` os-log subsystem. Release builds contain none of this code

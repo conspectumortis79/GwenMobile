@@ -20,77 +20,70 @@ final class AnswerExporterTests: XCTestCase {
         WebSource(title: title, url: url, domain: domain)
     }
 
-    private let fileNamePattern = /^gwen-\d{4}-\d{2}-\d{2}-\d{6}\.md$/
-
-    func testFileNameNeedsNoEscapingAndChangesEverySecond() {
-        let first = AnswerExporter.fileName(date: Date(timeIntervalSince1970: 1_800_000_000))
-        let second = AnswerExporter.fileName(date: Date(timeIntervalSince1970: 1_800_000_061))
-        XCTAssertNotNil(first.wholeMatch(of: fileNamePattern), first)
-        XCTAssertNotNil(second.wholeMatch(of: fileNamePattern), second)
-        XCTAssertNotEqual(first, second)
-        XCTAssertFalse(first.contains(" "))
-        XCTAssertFalse(first.contains("/"))
-        XCTAssertTrue(first.hasSuffix(".md"))
+    func testTitleIsTheQuestionWithoutPunctuation() {
+        XCTAssertEqual(AnswerExporter.title(from: "Wie viele Arbeitslose gab es?!"),
+                       "Wie viele Arbeitslose gab es")
+        XCTAssertEqual(AnswerExporter.title(from: "Erkläre „Klima\u{2009}–\u{2009}erwärmung\" bitte! 🌍"),
+                       "Erkläre Klima erwärmung bitte")
+        XCTAssertEqual(AnswerExporter.title(from: "   "), "")
+        XCTAssertEqual(AnswerExporter.title(from: nil), "")
     }
 
-    func testDocumentKeepsTheAnswerUntouchedWithoutSources() {
-        let document = AnswerExporter.document(text: "  Hallo **Welt**\nmit Zeilenumbruch\n\n\n",
-                                              sources: [], heading: "Quellen")
-        XCTAssertEqual(document, "Hallo **Welt**\nmit Zeilenumbruch\n")
+    func testTitleKeepsTheFirstWordsOnly() {
+        let long = "a b c d e f g h i j k l"
+        XCTAssertEqual(AnswerExporter.title(from: long), "a b c d e f g h i")
+        XCTAssertEqual(AnswerExporter.title(from: long).split(separator: " ").count,
+                       AnswerExporter.maxTitleWords)
     }
 
-    func testDocumentAppendsNumberedSourceLinks() {
-        let sources = [source("Startseite", "https://qwen.ai/home", "qwen.ai"),
-                       source("   ", "https://swift.org", "swift.org"),
-                       source("Doku", "https://developer.apple.com/x", "developer.apple.com")]
-        let document = AnswerExporter.document(text: "Antwort", sources: sources, heading: "Quellen")
-        let expected = """
-        Antwort
-
-        ## Quellen
-        1. [Startseite](https://qwen.ai/home)
-        2. [swift.org](https://swift.org)
-        3. [Doku](https://developer.apple.com/x)
-
-        """
-        XCTAssertEqual(document, expected)
+    func testFileNameIsTheQuestionAndFallsBackToTheTimestamp() {
+        XCTAssertEqual(AnswerExporter.fileName(question: "Was ist die Hauptstadt von Frankreich?",
+                                               date: Date(timeIntervalSince1970: 1_800_000_000)),
+                       "Was ist die Hauptstadt von Frankreich.html")
+        let fallback = AnswerExporter.fileName(question: "!!! ???", date: Date(timeIntervalSince1970: 1_800_000_000))
+        XCTAssertTrue(fallback.hasPrefix("antwort-"))
+        XCTAssertTrue(fallback.hasSuffix(".html"))
+        XCTAssertNotNil(fallback.wholeMatch(of: /^antwort-\d{4}-\d{2}-\d{2}-\d{6}\.html$/), fallback)
     }
 
-    func testWriteStoresUTF8MarkdownInsideTheAnswersFolder() throws {
+    func testWriteStoresRenderedHTMLNamedAfterTheQuestion() throws {
         let paths = StoragePaths(documents: tempDocuments())
         XCTAssertEqual(paths.answers.path, paths.documents.appendingPathComponent("answers").path)
         let url = try AnswerExporter(paths: paths).write(
-            text: "Grüße, Πάντα ☕",
+            text: "Die **Hauptstadt** ist Paris.\n\n- Ein Punkt\n- Noch einer",
             sources: [source("Beleg", "https://example.org/a", "example.org")],
-            date: Date(timeIntervalSince1970: 1_800_000_000))
-        XCTAssertEqual(url.deletingLastPathComponent().path, paths.answers.path)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
-        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8),
-                       "Grüße, Πάντα ☕\n\n## Quellen\n1. [Beleg](https://example.org/a)\n")
+            question: "Was ist die Hauptstadt von Frankreich?",
+            model: "qwen3.8-flash", elapsed: 4.2, time: "13:41")
+        XCTAssertEqual(url.lastPathComponent, "Was ist die Hauptstadt von Frankreich.html")
+        let stored = try String(contentsOf: url, encoding: .utf8)
+        XCTAssertTrue(stored.hasPrefix("<!doctype html>"))
+        XCTAssertTrue(stored.contains("<strong>Hauptstadt</strong>"))
+        XCTAssertTrue(stored.contains("<ul><li>Ein Punkt</li><li>Noch einer</li></ul>"))
+        XCTAssertFalse(stored.contains("**Hauptstadt**"))
+        XCTAssertFalse(stored.contains("Gefundene Quellen"))
+        XCTAssertTrue(stored.contains("<a href=\"https://example.org/a\">Beleg</a>"))
+        XCTAssertTrue(stored.contains("<title>Was ist die Hauptstadt von Frankreich?</title>"))
     }
 
-    func testWriteCreatesMissingDirectoriesAndNeverOverwrites() throws {
+    func testWriteCreatesDirectoriesAndNeverOverwrites() throws {
         let paths = StoragePaths(documents: tempDocuments().appendingPathComponent("tiefer/drin", isDirectory: true))
         let exporter = AnswerExporter(paths: paths)
-        let base = Date(timeIntervalSince1970: 1_800_000_000)
-        let first = try exporter.write(text: "eins", sources: [], date: base)
-        let second = try exporter.write(text: "zwei", sources: [], date: base.addingTimeInterval(3))
-        XCTAssertNotEqual(first, second)
-        XCTAssertEqual(try String(contentsOf: first, encoding: .utf8), "eins\n")
-        XCTAssertEqual(try String(contentsOf: second, encoding: .utf8), "zwei\n")
+        let first = try exporter.write(text: "eins", sources: [], question: "Gleiche Frage?")
+        let second = try exporter.write(text: "zwei", sources: [], question: "Gleiche Frage?!")
+        XCTAssertEqual(first.lastPathComponent, "Gleiche Frage.html")
+        XCTAssertEqual(second.lastPathComponent, "Gleiche Frage 2.html")
+        XCTAssertEqual(try String(contentsOf: first, encoding: .utf8).contains("eins"), true)
+        XCTAssertEqual(try String(contentsOf: second, encoding: .utf8).contains("zwei"), true)
     }
 
-    func testWriteUsesCurrentLanguageForTheSourceHeading() throws {
+    func testDifferentQuestionsGetDifferentFilesAndLanguageFollowsTheApp() throws {
         let exporter = AnswerExporter(paths: StoragePaths(documents: tempDocuments()))
-        let german = try exporter.write(text: "Antwort",
-                                        sources: [source("T", "https://a.test", "a.test")],
-                                        date: Date(timeIntervalSince1970: 1_800_000_000))
+        let german = try exporter.write(text: "Antwort", sources: [], question: "Erkläre mir das")
         L.apply(.en)
-        let english = try exporter.write(text: "Answer",
-                                         sources: [source("T", "https://a.test", "a.test")],
-                                         date: Date(timeIntervalSince1970: 1_800_000_001))
+        let english = try exporter.write(text: "Answer", sources: [], question: "Explain this")
         L.apply(.de)
-        XCTAssertTrue(try String(contentsOf: german, encoding: .utf8).contains("## Quellen\n"))
-        XCTAssertTrue(try String(contentsOf: english, encoding: .utf8).contains("## Sources\n"))
+        XCTAssertTrue(try String(contentsOf: german, encoding: .utf8).contains("<html lang=\"de\">"))
+        XCTAssertTrue(try String(contentsOf: english, encoding: .utf8).contains("<html lang=\"en\">"))
+        XCTAssertEqual(english.lastPathComponent, "Explain this.html")
     }
 }
