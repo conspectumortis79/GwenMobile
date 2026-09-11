@@ -217,7 +217,12 @@ extension ChatView {
             report.add("AIRDROP_DATEI", "name=\(url.lastPathComponent) endung=\(url.pathExtension) bytes=\(bytes)")
             do {
                 try Presenter.share(items: [url])
-                report.add("AIRDROP_FENSTER", "geoeffnet")
+                try? await Task.sleep(for: .seconds(2))
+                let opened = Presenter.activeShareSheet?.presentingViewController != nil
+                Presenter.activeShareSheet?.completionWithItemsHandler?(.airDrop, true, nil, nil)
+                try? await Task.sleep(for: .seconds(3))
+                let closed = Presenter.activeShareSheet?.presentingViewController == nil
+                report.add("AIRDROP_SCHLUSS", "geoeffnet=\(opened) automatischZu=\(closed)")
             } catch { report.addFailure("AIRDROP_FENSTER", error) }
         } else {
             report.add("AIRDROP_DATEI", "keinBildGefunden")

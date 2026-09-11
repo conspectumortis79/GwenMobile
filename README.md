@@ -8,9 +8,9 @@ Swift 6, strict concurrency, iOS 17+.
 ### Chat & conversations
 - Streaming chat answers with a selectable model (e.g. qwen3.8-flash) — already formatted
   while the tokens arrive, not only once the answer is finished
-- Compact input bar: a "+" menu holds photo, camera and read-aloud (with visible
-  ON/OFF state); mic and send stay one tap away, so the text field is roughly
-  twice as wide
+- Compact input bar: a "+" menu holds camera, photo and read-aloud (with visible
+  ON/OFF state) — camera first, because the photo is only the fallback when you cannot aim;
+  mic and send stay one tap away, so the text field is roughly twice as wide
 - Multiple conversations, persisted locally (JSON + images in the app sandbox)
 - API key stored in the Keychain, never in files
 - Bilingual UI (German / English), day separators, timestamps, markdown-lite rendering
@@ -33,7 +33,7 @@ Swift 6, strict concurrency, iOS 17+.
   sharing enabled) and the iOS share sheet opens in the same tap, so they can go to Files, Mail,
   Notes or AirDrop
 
-<img src="docs/screenshots/01-chat.png" alt="GwenMobile after launch: empty conversation, header with app icon and title, input bar with plus, mic and send" width="270"> <img src="docs/screenshots/02-plus-menu.png" alt="The plus menu opened above the input bar: Attach photo, Camera and Read aloud with its OFF state" width="270">
+<img src="docs/screenshots/01-chat.png" alt="GwenMobile after launch: empty conversation, header with app icon and title, input bar with plus, mic and send" width="270"> <img src="docs/screenshots/02-plus-menu.png" alt="The plus menu opened above the input bar: Camera first, then Attach photo, then Read aloud with its OFF state" width="270">
 
 *After launch (left) and the "+" menu with photo, camera and read-aloud (right).*
 
@@ -96,6 +96,10 @@ Swift 6, strict concurrency, iOS 17+.
 - What is handed over is the stored JPEG file itself, not a re-encoded thumbnail, so the
   receiver gets the same bytes the app shows. If the file has been cleaned away in the meantime,
   the app says so instead of sharing an empty attachment.
+- Once an activity reports that it finished (AirDrop delivered, Mail sent, …) the share sheet
+  closes by itself and the chat is visible again — no leftover panel to tap away. Cancelling or
+  an activity that never reports back leaves the normal system behaviour untouched, and a sheet
+  the system already tore down is never dismissed twice.
 
 ### Histories and storage
 - The header's list button opens "Verläufe": every conversation with its date, message
@@ -238,7 +242,7 @@ report in `Documents/search_once.txt`, `kapsel=nil` is the passing state) and `e
 (real answer, then the rendered export: file name, `<strong>`/`<p>`/`<a href>` counts and whether any
 raw `**` survived — report in `Documents/export_probe.txt`) and `airdropprobe`
 (stored JPEG of the newest chat picture handed to the share sheet — `Documents/airdrop_probe.txt`),
-plus a bare
+`menushow` (opens the "+" menu and leaves it open, for screenshots), plus a bare
 `gwenmobile://test/<attachment-file-name>` for a single image. They assume the conversations and image files of the reference
 device exist in the app sandbox (`img_0B85747A-BAA.jpg`, `img_7924D952-6BF.jpg`) and
 log to the `flow` os-log subsystem. Release builds contain none of this code

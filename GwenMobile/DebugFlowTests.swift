@@ -37,6 +37,10 @@ extension ChatView {
             await runAirDropProbe()
             return
         }
+        if name == "menushow" {
+            attachMenu = true
+            return
+        }
         let all = store.conversations.flatMap { c in c.messages.flatMap { $0.images + ($0.outImages ?? []) } }
         if name == "typetest" || name == "scrolltest" {
             UIApplication.shared.isIdleTimerDisabled = true

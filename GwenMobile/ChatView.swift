@@ -11,7 +11,7 @@ struct ChatView: View {
     var testCmd: String = ""
     @State private var scrolledAnchor: AnyHashable?
     @State private var lastScrollDate = Date.distantPast
-    @State private var attachMenu = false
+    @State var attachMenu = false
     @State var input: String = ""
     @State private var pendingItems: [PhotosPickerItem] = []
     @State var pendingImages: [(image: UIImage, file: String?)] = []
@@ -461,6 +461,9 @@ struct ChatView: View {
         let readLbl = L.t("read_aloud")
         let readState = settings.speakAnswers ? L.t("state_on") : L.t("state_off")
         return VStack(alignment: .leading, spacing: 6) {
+            Button { attachMenu = false; CameraPresenter.shared.present() } label: {
+                menuRow("camera", camLbl, state: nil, on: false)
+            }
             PhotosPicker(selection: $pendingItems, maxSelectionCount: 1, matching: .images) {
                 menuRow("photo.on.rectangle.angled", photoLbl, state: nil, on: false)
             }
@@ -480,9 +483,6 @@ struct ChatView: View {
                     }
                     pendingItems = []
                 }
-            }
-            Button { attachMenu = false; CameraPresenter.shared.present() } label: {
-                menuRow("camera", camLbl, state: nil, on: false)
             }
             Divider().padding(.horizontal, 12)
             Button { settings.speakAnswers.toggle() } label: {
