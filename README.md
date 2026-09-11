@@ -7,24 +7,37 @@ Swift 6, strict concurrency, iOS 17+.
 
 ### Chat & conversations
 - Streaming chat answers with a selectable model (e.g. qwen3.8-flash)
-- Compact input bar: a "+" menu holds photo, camera, image-AI wand and read-aloud
-  (with visible ON/OFF state); mic and send stay one tap away, so the text field
-  is roughly twice as wide
+- Compact input bar: a "+" menu holds photo, camera and read-aloud (with visible
+  ON/OFF state); mic and send stay one tap away, so the text field is roughly
+  twice as wide
 - Multiple conversations, persisted locally (JSON + images in the app sandbox)
 - API key stored in the Keychain, never in files
 - Bilingual UI (German / English), day separators, timestamps, markdown-lite rendering
 - Branded header: app icon beside the left-aligned "GwenMobile" title, actions right-aligned
 
+<img src="docs/screenshots/01-chat.png" alt="GwenMobile after launch: empty conversation, header with app icon and title, input bar with plus, mic and send" width="270"> <img src="docs/screenshots/02-plus-menu.png" alt="The plus menu opened above the input bar: Attach photo, Camera and Read aloud with its OFF state" width="270">
+
+*After launch (left) and the "+" menu with photo, camera and read-aloud (right).*
+
 ### Images
 - Attach photos from camera or gallery; the vision model (e.g. qwen3.8-max) sees them
-- AI image generation via the wand toggle (e.g. wan2.7-image)
-- **AI image editing**: attach an image, enable the wand, describe the change
+- No switch, no toggle, no separate mode: what you type decides whether you get a
+  picture. There is no image-AI on/off control anywhere in the UI.
+- **AI image generation**: ask in plain text — "Erzeuge ein Bild von …", "generate a
+  picture of …", "draw a logo" — and the message goes straight to the image model
+  (e.g. wan2.7-image). A message without attachments becomes an image request as soon
+  as it pairs a creation verb (erstelle, erzeuge, generiere, zeichne, male, kreiere,
+  create, generate, draw, make) with a picture noun (Bild, Abbild, Illustration, Foto,
+  picture, image, photo, logo, poster, wallpaper)
+- **AI image editing**: attach an image and describe the change
   ("make the mouse blue") — the image is edited in place, not regenerated
 - Smart intent router: every image + instruction is classified as
   EDIT / CREATE / CHAT by the text model, so plain questions about a
-  photo still go to the vision chat
+  photo still go to the vision chat; if the classifier returns no answer, a
+  keyword fallback still routes obvious "create something new" requests to the
+  image model and everything else to chat
 - Follow-up edits: right after an image answer, just say "make it darker" —
-  the previous result is reused automatically
+  the previous result is picked up as the input image, no re-attaching
 - Long-press any generated image → "Edit" to send it back into the input bar
 - Save results to the Photos app (button or context menu)
 
@@ -98,6 +111,10 @@ the mic button in the app.
 - Endpoint picker (Token Plan, DashScope intl/US/CN, EU workspace) + custom base URL
 - Model pickers (chat, vision, image, audio) populated from your account (GET /models)
 - Language, read-aloud toggle, connection test
+
+<img src="docs/screenshots/03-settings.png" alt="Settings sheet: language picker, Qwen Cloud API key field, endpoint picker with base URL and the model pickers" width="270">
+
+*The settings sheet, reached through the gear in the header.*
 
 ## Requirements
 1. Xcode from the App Store (~40 GB, one-time).
