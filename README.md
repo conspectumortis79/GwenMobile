@@ -64,9 +64,20 @@ Swift 6, strict concurrency, iOS 17+.
   on an existing appointment replaces them ("alerts every day at...",
   "remove the reminders")
 - Relative dates ("tomorrow", "next Monday") are resolved against the device clock
+- **Private or work**: "make the dentist appointment private", "book that in my work calendar",
+  "leg den Termin privat an" — the app maps that onto the calendars that actually exist on your
+  iPhone (Privat/Arbeit, Private/Work, Persönlich, Zu Hause, Home/Homeoffice, …). Saying nothing
+  files a new appointment in the **work** calendar, and an existing appointment keeps its calendar
+  unless you ask to move it
+- "set the calendar to private" on an appointment that already exists moves it there
+- A calendar wish never ends up as a note: if the router files "privat" into the note field anyway,
+  the app moves it into the calendar choice and drops the note — including a leftover note like
+  "privat" from an older appointment, which is cleaned up while moving it
+- A calendar you named that does not exist is reported instead of guessed, and the answer lists
+  the calendars you have
 - Asks for calendar permission on first use
 - Every successful action is confirmed in chat with the full appointment data
-  (title, day, start–end time, location)
+  (title, day, start–end time, location, calendar)
 - Questions about the calendar ("what's on tomorrow?") stay normal chat
 
 ### Voice

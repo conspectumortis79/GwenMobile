@@ -12,6 +12,7 @@
 		0CFE9D883933524A5EB54CB4 /* WAVCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2998A608A6B454B7039E39 /* WAVCodecTests.swift */; };
 		0E5C22474418C00BFD7668AF /* DebugFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D50C9CEE0B920C6F5219845 /* DebugFlowTests.swift */; };
 		19F7DEC490D7611636F633C4 /* SystemPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E1B631FF83274A2BAC3EAC4 /* SystemPrompt.swift */; };
+		1CB4F6BBF6FE7FBA797A88E3 /* CalendarChoiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AFED3E44AC10CB45825094A /* CalendarChoiceTests.swift */; };
 		1D5146FFBBC9FB734243ADD1 /* AnswerError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B4ABEDC9CB61EE0D3AC21 /* AnswerError.swift */; };
 		27049FFD91EC60CC9AC85F84 /* SystemPromptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC62B1DD6F8C5335DBC98914 /* SystemPromptTests.swift */; };
 		2887B9BB59B2B6B242FB91A4 /* GwenMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F8D35447512097A7A6329DD /* GwenMobileApp.swift */; };
@@ -33,11 +34,13 @@
 		6A469E31EE3B5AB4B2D7549D /* VoiceTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2565E25857474CC58E1991 /* VoiceTranscriber.swift */; };
 		737A67D2F1AFE983CEFEA500 /* ImageFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7486036C22301522531F6E2A /* ImageFeed.swift */; };
 		784DEB053D973191B37B286F /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D2BEB898C52C42DCD42839 /* APIError.swift */; };
+		7A98879DE1734DE4DD1CB2E0 /* CalendarPlanRefiner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18AA9867B6BED6F3530B4D27 /* CalendarPlanRefiner.swift */; };
 		7C9B438ABAAABADE97E3DA39 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8A3F6A3BD2249D02B203E0F0 /* Assets.xcassets */; };
 		83D500F25448767D5807F18F /* ChatBubbles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72D93E76E44ECD656357458 /* ChatBubbles.swift */; };
 		88F317E1FD375B534703A365 /* ChatRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51EA00E69358500C8D73DB27 /* ChatRunner.swift */; };
 		9100D965DEFC09EBFF911759 /* IntentHeuristics.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA4C4B955DF23F1A2A69D5C /* IntentHeuristics.swift */; };
 		9604BFC3404EAB5E85173CA5 /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDCB53F816AD72AB27BC0BF4 /* StorageTests.swift */; };
+		A3C6BB4D4E0EB7505C4500D3 /* CalendarChoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F7FEDD24AF74526BD1E451A /* CalendarChoice.swift */; };
 		A7BAA2C7E18560269ED93F83 /* AnswerErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D85DFDA39B9A8282E193770 /* AnswerErrorTests.swift */; };
 		A9BC3B4FF34AD306BB49C4E8 /* ChatStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADB8E2EC6319FF4173AC9234 /* ChatStore.swift */; };
 		A9E6CB5F64DA4B2D02A7C4BD /* CalendarAuthorizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECA64393C8BD2DFBE57235A0 /* CalendarAuthorizationTests.swift */; };
@@ -48,6 +51,7 @@
 		B6EA81C47137497A80870EE4 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE58309DD21F20B163C2434 /* Settings.swift */; };
 		B880113A0A161ED301CBBDA7 /* ChatResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03854A980E5863E4413BF506 /* ChatResponse.swift */; };
 		BC2E76669B13C2E6BCA36A1A /* QwenAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FFB9D8E673D0DF55284898 /* QwenAPI.swift */; };
+		BE2C80037EB90E230D61DCFA /* CalendarPlanRefinerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD671FC1504CEF0B881A3734 /* CalendarPlanRefinerTests.swift */; };
 		BF67FD489E4231CD1D805E73 /* HTTPTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD3A451CC17431D7E40C3527 /* HTTPTransportTests.swift */; };
 		C0738CBBFA40E347C2145DFC /* UndoBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710C9082A5C93B6F4B77A474 /* UndoBar.swift */; };
 		CA539A27125961338D5BB704 /* StoragePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149775607E2842B7A37A3DE6 /* StoragePaths.swift */; };
@@ -87,9 +91,11 @@
 		0F8D35447512097A7A6329DD /* GwenMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GwenMobileApp.swift; sourceTree = "<group>"; };
 		149775607E2842B7A37A3DE6 /* StoragePaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoragePaths.swift; sourceTree = "<group>"; };
 		15E1E0C9F912F8A2DE0EBD55 /* GwenMobileTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GwenMobileTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		18AA9867B6BED6F3530B4D27 /* CalendarPlanRefiner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarPlanRefiner.swift; sourceTree = "<group>"; };
 		1D4A9A2567DC47F5C627985E /* IntentHeuristicsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentHeuristicsTests.swift; sourceTree = "<group>"; };
 		262A5AB0A6097ED145E8A809 /* ChatResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatResponseTests.swift; sourceTree = "<group>"; };
 		270F477AC1CF86ABB1F5C375 /* CameraPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPresenter.swift; sourceTree = "<group>"; };
+		2AFED3E44AC10CB45825094A /* CalendarChoiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChoiceTests.swift; sourceTree = "<group>"; };
 		2E1B631FF83274A2BAC3EAC4 /* SystemPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemPrompt.swift; sourceTree = "<group>"; };
 		39309C52D51D22AA62F0431B /* DebugSweep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSweep.swift; sourceTree = "<group>"; };
 		4517B39D2DA20FF51F7B5A4E /* StreamThrottleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamThrottleTests.swift; sourceTree = "<group>"; };
@@ -108,6 +114,7 @@
 		7486036C22301522531F6E2A /* ImageFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageFeed.swift; sourceTree = "<group>"; };
 		74FFB9D8E673D0DF55284898 /* QwenAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QwenAPI.swift; sourceTree = "<group>"; };
 		7F155EC217D110B3F3C0FD43 /* UndoBarHostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoBarHostTests.swift; sourceTree = "<group>"; };
+		7F7FEDD24AF74526BD1E451A /* CalendarChoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChoice.swift; sourceTree = "<group>"; };
 		7F8105DD5A3827046E43EF23 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		7FAB0CCD15AA534E1297706C /* ModelFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelFilter.swift; sourceTree = "<group>"; };
 		8A3F6A3BD2249D02B203E0F0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -129,6 +136,7 @@
 		C624A9D2BB79A65ECD118A0A /* RealtimeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeClient.swift; sourceTree = "<group>"; };
 		CB2565E25857474CC58E1991 /* VoiceTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceTranscriber.swift; sourceTree = "<group>"; };
 		CC4038A95F76F1C216525D10 /* StorageUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageUsage.swift; sourceTree = "<group>"; };
+		CD671FC1504CEF0B881A3734 /* CalendarPlanRefinerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarPlanRefinerTests.swift; sourceTree = "<group>"; };
 		CE3F063E06C313BC2E176E62 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		CEA4C4B955DF23F1A2A69D5C /* IntentHeuristics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentHeuristics.swift; sourceTree = "<group>"; };
 		CEE952B9C0D6B31F62640B5B /* HistoryCleanerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCleanerTests.swift; sourceTree = "<group>"; };
@@ -152,6 +160,8 @@
 				4D85DFDA39B9A8282E193770 /* AnswerErrorTests.swift */,
 				9E99C97E1CA0486DB1D6D294 /* APIErrorParserTests.swift */,
 				ECA64393C8BD2DFBE57235A0 /* CalendarAuthorizationTests.swift */,
+				2AFED3E44AC10CB45825094A /* CalendarChoiceTests.swift */,
+				CD671FC1504CEF0B881A3734 /* CalendarPlanRefinerTests.swift */,
 				262A5AB0A6097ED145E8A809 /* ChatResponseTests.swift */,
 				ADD5D3EE2AA4841097D5EF81 /* ChatStoreTests.swift */,
 				CEE952B9C0D6B31F62640B5B /* HistoryCleanerTests.swift */,
@@ -179,7 +189,9 @@
 				8A3F6A3BD2249D02B203E0F0 /* Assets.xcassets */,
 				EE0CDE44D098C35E2386D200 /* AttachmentImage.swift */,
 				089BC76D609665E27CBC7DC1 /* Bubble.swift */,
+				7F7FEDD24AF74526BD1E451A /* CalendarChoice.swift */,
 				C4FB8DA772DC048E33BE964A /* CalendarKit.swift */,
+				18AA9867B6BED6F3530B4D27 /* CalendarPlanRefiner.swift */,
 				270F477AC1CF86ABB1F5C375 /* CameraPresenter.swift */,
 				B72D93E76E44ECD656357458 /* ChatBubbles.swift */,
 				03854A980E5863E4413BF506 /* ChatResponse.swift */,
@@ -335,6 +347,8 @@
 				48286D2CCE40064F4EEC569A /* APIErrorParserTests.swift in Sources */,
 				A7BAA2C7E18560269ED93F83 /* AnswerErrorTests.swift in Sources */,
 				A9E6CB5F64DA4B2D02A7C4BD /* CalendarAuthorizationTests.swift in Sources */,
+				1CB4F6BBF6FE7FBA797A88E3 /* CalendarChoiceTests.swift in Sources */,
+				BE2C80037EB90E230D61DCFA /* CalendarPlanRefinerTests.swift in Sources */,
 				E30C948F0CFAE09D1BF1D66A /* ChatResponseTests.swift in Sources */,
 				DB5063DA30F1CF714ADED129 /* ChatStoreTests.swift in Sources */,
 				BF67FD489E4231CD1D805E73 /* HTTPTransportTests.swift in Sources */,
@@ -361,7 +375,9 @@
 				1D5146FFBBC9FB734243ADD1 /* AnswerError.swift in Sources */,
 				D19F2F3C2E073C77858CD9D7 /* AttachmentImage.swift in Sources */,
 				5AA8E73415E6A637CFE8FD43 /* Bubble.swift in Sources */,
+				A3C6BB4D4E0EB7505C4500D3 /* CalendarChoice.swift in Sources */,
 				B6363BBBD307D1A4E4900DB6 /* CalendarKit.swift in Sources */,
+				7A98879DE1734DE4DD1CB2E0 /* CalendarPlanRefiner.swift in Sources */,
 				34D9A1E618C94827989B0ED2 /* CameraPresenter.swift in Sources */,
 				83D500F25448767D5807F18F /* ChatBubbles.swift in Sources */,
 				B880113A0A161ED301CBBDA7 /* ChatResponse.swift in Sources */,

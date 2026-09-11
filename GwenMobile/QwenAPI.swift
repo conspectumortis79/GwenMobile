@@ -160,11 +160,13 @@ enum QwenAPI {
         var notes: String?
         var find: String?
         var alerts: [Int]?
+        var calendar: String?
     }
 
     static func calendarPlan(baseURL: String, key: String, model: String,
                              instruction: String,
-                             history: [ChatMessage] = [], events: String = "") async throws -> CalendarPlan? {
+                             history: [ChatMessage] = [], events: String = "",
+                             calendars: String = "") async throws -> CalendarPlan? {
         let nowFmt = DateFormatter()
         nowFmt.locale = Locale(identifier: "en_US_POSIX")
         nowFmt.dateFormat = "yyyy-MM-dd HH:mm EEEE"
@@ -177,7 +179,10 @@ enum QwenAPI {
         }.joined(separator: "\n")
         var ctx = ""
         if !events.isEmpty {
-            ctx += "\nExisting upcoming events (title \u{2014} start \u{2014} current notifications):\n\(events)\n"
+            ctx += "\nExisting upcoming events (title \u{2014} start \u{2014} current notifications \u{2014} calendar):\n\(events)\n"
+        }
+        if !calendars.isEmpty {
+            ctx += calendars
         }
         if !hist.isEmpty {
             ctx += "\nRecent conversation (use it to resolve what the user refers to):\n\(hist)\n"
@@ -189,7 +194,7 @@ enum QwenAPI {
         Reply with ONLY one JSON object, no markdown fences:
         {"action":"create|update|delete|none","title":"...","start":"YYYY-MM-DD HH:MM",\
         "end":"YYYY-MM-DD HH:MM","location":"...","notes":"...","alerts":[60],\
-        "find":"words identifying the existing event"}
+        "calendar":"...","find":"words identifying the existing event"}
         Rules:
         - create: only for events NOT in the existing list above. "title" and "start" required; \
         if only a vague time is given use the next full hour; default "end" = start + 30 minutes; \
@@ -205,6 +210,17 @@ enum QwenAPI {
         NEVER create a duplicate event just to attach a reminder to it.
         - update: set "find" plus every changed field (new "start"/"end"/"title"/"location"). \
         Omit "alerts" to keep existing notifications.
+        - "calendar": the exact title of the calendar the appointment belongs to. Set it whenever the user \
+        names a calendar or describes one ("privat", "private", "persoenlich", "Arbeit", "work", "beruflich", \
+        "Firma", "in meinem privaten Kalender"). Map the description onto one of the available calendar titles \
+        when a list is given above, otherwise answer "privat" or "arbeit". On action=update this MOVES the \
+        existing appointment to that calendar. Omit "calendar" when the user says nothing about it - the app \
+        then files new appointments under the work calendar and keeps an existing appointment where it is.
+        - A calendar wish NEVER belongs in "notes", "title" or "location": "privat", "nicht arbeit", \
+        "private", "work", "privat statt arbeit" always goes into "calendar" only. Put text into "notes" \
+        only when the user wants exactly that text stored inside the appointment.
+        - A short follow-up that only names a calendar ("bitte privat statt arbeit", "mach das privat") is \
+        action=update with "find" = the appointment from the recent conversation above and "calendar" set.
         - delete: set "find".
         - "none" for everything else, including questions about the calendar or standalone to-dos \
         that do not refer to an existing appointment.
@@ -217,8 +233,8 @@ enum QwenAPI {
         guard let raw = try await askText(req),
               let s = raw.firstIndex(of: "{"), let e = raw.lastIndex(of: "}"),
               let json = raw[s...e].data(using: .utf8),
-              let plan = try? JSONDecoder().decode(CalendarPlan.self, from: json) else { return nil }
-        return plan
+              let decoded = try? JSONDecoder().decode(CalendarPlan.self, from: json) else { return nil }
+        return CalendarPlanRefiner.refine(decoded, instruction: instruction)
     }
 
     static func streamText(req: URLRequest) -> AsyncThrowingStream<String, Error> {

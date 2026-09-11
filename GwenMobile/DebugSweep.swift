@@ -89,8 +89,9 @@ extension ChatView {
         report.add("KALENDER_KONTEXT", "zeichen=\(CalendarService.upcomingContext().count)")
         do {
             if let plan = try await QwenAPI.calendarPlan(baseURL: baseURL, key: key, model: settings.chatModel,
-                                                        instruction: "Leg bitte morgen um 14 Uhr einen Zahnarzttermin für eine Stunde an") {
-                report.add("KALENDER_PLAN", "aktion=\(plan.action) titel=\(plan.title ?? "-") start=\(plan.start ?? "-") end=\(plan.end ?? "-") alerten=\(plan.alerts.map { String(describing: $0) } ?? "-")")
+                                                        instruction: "Leg bitte morgen um 14 Uhr einen Zahnarzttermin für eine Stunde an",
+                                                        calendars: CalendarService.calendarsContext()) {
+                report.add("KALENDER_PLAN", "aktion=\(plan.action) titel=\(plan.title ?? "-") start=\(plan.start ?? "-") end=\(plan.end ?? "-") alerten=\(plan.alerts.map { String(describing: $0) } ?? "-") kalender=\(plan.calendar ?? "-")")
             } else {
                 report.add("KALENDER_PLAN", "keinPlan")
             }

@@ -26,6 +26,17 @@ enum CalendarService {
         }
     }
 
+    static func calendarTitles() -> [String] {
+        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return [] }
+        return store.calendars(for: .event).filter { $0.allowsContentModifications }.map { $0.title }
+    }
+
+    static func calendarsContext() -> String {
+        let titles = calendarTitles()
+        guard !titles.isEmpty else { return "" }
+        return "\nYour writable calendars (use one exact title for \"calendar\"): \(titles.joined(separator: ", ")).\n"
+    }
+
     static func upcomingContext() -> String {
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return "" }
         let fmt = dateTimeFormatter()
@@ -39,7 +50,7 @@ enum CalendarService {
         return events.map { ev in
             let mins = alertMinutes(for: ev)
             let alerts = mins.isEmpty ? "none" : mins.map { "\($0) min before" }.joined(separator: ", ")
-            return "- \(ev.title ?? "") — \(fmt.string(from: ev.startDate)) — notifications: \(alerts)"
+            return "- \(ev.title ?? "") — \(fmt.string(from: ev.startDate)) — notifications: \(alerts) — calendar: \(ev.calendar.title)"
         }.joined(separator: "\n")
     }
 
@@ -57,7 +68,8 @@ enum CalendarService {
             ev.title = plan.title ?? L.t("cal_default_title")
             ev.startDate = start
             ev.endDate = end
-            ev.calendar = store.defaultCalendarForNewEvents
+            ev.calendar = try targetCalendar(requested: plan.calendar, current: store.defaultCalendarForNewEvents,
+                                             silent: .preferWork)
             if let loc = plan.location { ev.location = loc }
             if let notes = plan.notes { ev.notes = notes }
             if let alerts = plan.alerts { ev.alarms = alarms(minutesBefore: alerts, for: ev) }
@@ -75,6 +87,10 @@ enum CalendarService {
             }
             if let loc = plan.location { ev.location = loc }
             if let notes = plan.notes { ev.notes = notes }
+            if let wanted = plan.calendar {
+                ev.calendar = try targetCalendar(requested: wanted, current: ev.calendar, silent: .keepCurrent)
+                if let notes = ev.notes, CalendarPlanRefiner.isPureCalendarHint(notes) { ev.notes = nil }
+            }
             if let alerts = plan.alerts {
                 ev.alarms = alarms(minutesBefore: alerts, for: ev)
             } else if ev.startDate != oldStart, !keepMinutes.isEmpty {
@@ -89,6 +105,27 @@ enum CalendarService {
             return L.fmt("cal_deleted", desc)
         case .none:
             return ""
+        }
+    }
+
+    private static func targetCalendar(requested: String?, current: EKCalendar?,
+                                       silent: CalendarChoice.Silent) throws -> EKCalendar {
+        let candidates = store.calendars(for: .event).filter { $0.allowsContentModifications }
+        let titles = candidates.map { $0.title }
+        let outcome = CalendarChoice.resolve(requested: requested, available: titles,
+                                             deviceDefault: store.defaultCalendarForNewEvents?.title,
+                                             silent: silent)
+        switch outcome {
+        case .keep:
+            guard let current else { throw APIError(message: L.t("cal_no_calendar")) }
+            return current
+        case .title(let chosen):
+            guard let calendar = candidates.first(where: { $0.title == chosen }) else {
+                throw APIError(message: L.t("cal_no_calendar"))
+            }
+            return calendar
+        case .unmatched(let asked):
+            throw APIError(message: L.fmt2("cal_calendar_missing", asked, titles.joined(separator: ", ")))
         }
     }
 
@@ -155,6 +192,7 @@ enum CalendarService {
         endFmt.dateFormat = L.timeFormat
         var s = "\(ev.title ?? "") — \(d.string(from: ev.startDate))–\(endFmt.string(from: ev.endDate))"
         if let loc = ev.location, !loc.isEmpty { s += " · \(loc)" }
+        s += "\n" + L.fmt("cal_calendar", ev.calendar.title)
         if let alerts = alertSummary(for: ev) { s += "\n\(alerts)" }
         return s
     }

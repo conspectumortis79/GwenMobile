@@ -655,7 +655,8 @@ struct ChatView: View {
             if let plan = try await QwenAPI.calendarPlan(baseURL: settings.baseURL, key: settings.apiKey,
                                                          model: chatModel, instruction: text,
                                                          history: prior,
-                                                         events: CalendarService.upcomingContext()),
+                                                         events: CalendarService.upcomingContext(),
+                                                         calendars: CalendarService.calendarsContext()),
                plan.action != .none {
                 let info = try await CalendarService.perform(plan)
                 store.appendAssistant(info, model: chatModel,
