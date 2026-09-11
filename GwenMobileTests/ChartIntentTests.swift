@@ -33,6 +33,27 @@ final class ChartIntentTests: XCTestCase {
         XCTAssertFalse(ChartIntent.looksLikeChartRequest("male eine grafik mit bunten tieren"))
     }
 
+    func testQuestionsAboutAnExistingChartStayInChat() {
+        XCTAssertFalse(ChartIntent.looksLikeChartRequest(
+            "ich will wissen, woher du die statistik für österreich hast, die du in dem diagramm eingetragen hast"))
+        XCTAssertFalse(ChartIntent.looksLikeChartRequest(
+            "weißt du noch, welche werte du eingetragen hast im diagramm? bitte zeige sie mir"))
+        XCTAssertFalse(ChartIntent.looksLikeChartRequest("woher hast du die zahlen für das diagramm?"))
+        XCTAssertFalse(ChartIntent.looksLikeChartRequest("zeig mir die statistik, die du im diagramm genutzt hast"))
+        XCTAssertFalse(ChartIntent.looksLikeChartRequest("was steht in der grafik über die arbeitslosenquote"))
+    }
+
+    func testRenewalOfAnExistingChartIsStillAChart() {
+        XCTAssertTrue(ChartIntent.looksLikeChartRequest("mach das diagramm bitte neu mit den werten von 2025"))
+        XCTAssertTrue(ChartIntent.looksLikeChartRequest(
+            "erstelle ein diagramm aus den zahlen, die du im diagramm gezeigt hast"))
+    }
+
+    func testExistingVisualReferenceIsSeparatelyVisible() {
+        XCTAssertTrue(ChartIntent.refersToExistingVisual("die du in dem diagramm eingetragen hast"))
+        XCTAssertFalse(ChartIntent.refersToExistingVisual("mach ein diagramm daraus"))
+    }
+
     func testWebDataWishIsSeparatelyVisible() {
         XCTAssertTrue(ChartIntent.wantsWebData("hol die zahlen aus dem internet und mach ein diagramm"))
         XCTAssertFalse(ChartIntent.wantsWebData("stell die zahlen aus meiner tabelle als diagramm dar"))
