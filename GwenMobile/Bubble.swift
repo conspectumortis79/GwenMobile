@@ -30,6 +30,7 @@ struct Bubble: View, Equatable {
     var sources: [WebSource] = []
     let media: MediaStore?
     @State private var savedNote: String?
+    @State private var exportNote: String?
 
     init(message: ChatMessage, media: MediaStore, time: String? = nil, isLast: Bool = false,
          width: CGFloat = 360,
@@ -103,9 +104,6 @@ struct Bubble: View, Equatable {
                                             .font(.system(size: 13))
                                     }
                                 }
-                                if let note = savedNote {
-                                    Text(note).font(.system(size: 12)).foregroundStyle(.secondary)
-                                }
                             }
                             .buttonStyle(.borderless)
                             .foregroundStyle(Color(.secondaryLabel))
@@ -143,6 +141,12 @@ struct Bubble: View, Equatable {
                     }
             }
             .frame(width: width, alignment: isUser ? .trailing : .leading)
+            if let note = savedNote {
+                Text(verbatim: note)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color(.secondaryLabel))
+                    .padding(.horizontal, 14)
+            }
             if isLast, let time {
                 Text(verbatim: isUser ? "\(L.t("read")) \(time)" : time)
                     .font(.system(size: 11))
@@ -151,11 +155,33 @@ struct Bubble: View, Equatable {
             }
         }
         .contextMenu {
+            if !isUser && !text.isEmpty {
+                Button { saveAsFile() } label: {
+                    Label(L.t("save_as_file"), systemImage: "arrow.down.doc")
+                }
+            }
             if let messageID, let onDelete, !streaming {
                 Button(role: .destructive) { onDelete(messageID) } label: {
                     Label(L.t("delete_message"), systemImage: "trash")
                 }
             }
+        }
+        .alert(L.t("error"), isPresented: Binding(
+            get: { exportNote != nil },
+            set: { if !$0 { exportNote = nil } }
+        )) {
+            Button(L.t("ok"), role: .cancel) { exportNote = nil }
+        } message: {
+            Text(verbatim: exportNote ?? "")
+        }
+    }
+
+    private func saveAsFile() {
+        do {
+            try Presenter.share(url: AnswerExporter().write(text: text, sources: sources))
+            savedNote = L.t("answers_saved")
+        } catch {
+            exportNote = error.localizedDescription
         }
     }
 

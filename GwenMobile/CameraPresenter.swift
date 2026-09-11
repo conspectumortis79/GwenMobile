@@ -8,7 +8,7 @@ final class CameraPresenter: NSObject, ObservableObject,
     var onImage: ((UIImage) -> Void)?
 
     func present() {
-        guard let top = topViewController() else { return }
+        guard let top = Presenter.topViewController else { return }
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
             let al = UIAlertController(title: L.t("no_camera_title"),
                                        message: L.t("no_camera_msg"),
@@ -24,17 +24,7 @@ final class CameraPresenter: NSObject, ObservableObject,
     }
 
     func dismissPresented() {
-        topViewController()?.dismiss(animated: true)
-    }
-
-    private func topViewController() -> UIViewController? {
-        guard let scene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }),
-              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else { return nil }
-        var top = root
-        while let p = top.presentedViewController { top = p }
-        return top
+        Presenter.topViewController?.dismiss(animated: true)
     }
 
     func imagePickerController(_ picker: UIImagePickerController,

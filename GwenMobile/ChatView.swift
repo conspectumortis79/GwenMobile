@@ -583,6 +583,12 @@ struct ChatView: View {
                                convID: convID, started: started)
         case .calendar:
             await runCalendarFlow(text: text, history: history, convID: convID, started: started)
+        case .chart(let webData):
+            if webData {
+                await runWebChartFlow(question: text, convID: convID, started: started)
+            } else {
+                await runChartFlow(question: text, hits: [], convID: convID, started: started)
+            }
         case .chat:
             await streamChat(history: history, convID: convID, started: started)
         }
@@ -668,6 +674,61 @@ struct ChatView: View {
         }
     }
 
+    @MainActor private func gatherWebHits(_ question: String) async throws -> [WebHit] {
+        webStatus = L.t("web_searching")
+        defer { webStatus = nil }
+        return try await WebResearch(onStatus: { status in webStatus = status }).hits(for: question)
+    }
+
+    @MainActor private func runWebChartFlow(question: String, convID: UUID, started: Date) async {
+        let chatModel = settings.chatModel
+        do {
+            let hits = try await gatherWebHits(question)
+            await runChartFlow(question: question, hits: hits, convID: convID, started: started)
+        } catch {
+            store.appendAssistant(AnswerError.other(error.localizedDescription, generic: L.t("err_web_generic")),
+                                  model: chatModel, elapsed: Date().timeIntervalSince(started), to: convID)
+        }
+    }
+
+    @MainActor private func runChartFlow(question: String, hits: [WebHit], convID: UUID, started: Date) async {
+        imageWorking = true
+        workingLabelOverride = L.t("making_chart")
+        defer { imageWorking = false; workingLabelOverride = nil }
+        let chatModel = settings.chatModel
+        let imageModel = settings.imageModel
+        let media = store.media
+        let sources = WebResearch.sources(from: hits)
+        do {
+            guard let plan = try await ChartPlanner.plan(baseURL: settings.baseURL, key: settings.apiKey,
+                                                         model: chatModel, question: question,
+                                                         data: WebResearch.dataDigest(from: hits)) else {
+                throw APIError(message: L.t("chart_no_data"))
+            }
+            flowMark("CHART plan kind=\(plan.kind.rawValue) points=\(plan.points.count) web=\(hits.count)")
+            let req = try QwenAPI.makeImageRequest(baseURL: settings.baseURL, key: settings.apiKey,
+                                                   model: imageModel, prompt: plan.imagePrompt(),
+                                                   inputImages: [], isEdit: false)
+            let urls = try await QwenAPI.generateImage(req: req)
+            var attachments: [Attachment] = []
+            for u in urls {
+                let data = try await QwenAPI.download(u)
+                if let name = media.storeImageData(data) { attachments.append(Attachment(file: name)) }
+            }
+            guard !attachments.isEmpty else { throw APIError(message: L.t("no_image")) }
+            let answer = plan.summary(sources: sources)
+            store.appendAssistant(answer, model: imageModel, elapsed: Date().timeIntervalSince(started),
+                                  to: convID, outImages: attachments,
+                                  sources: sources.isEmpty ? nil : sources)
+            flowMark("CHART done images=\(attachments.count)")
+            maybeSpeak(answer)
+        } catch {
+            store.appendAssistant(AnswerError.model(error.localizedDescription, model: imageModel,
+                                                    generic: L.t("err_generic")), model: imageModel,
+                                  elapsed: Date().timeIntervalSince(started), to: convID)
+        }
+    }
+
     @MainActor func streamChat(history: [ChatMessage], convID: UUID, started: Date) async {
         let model = history.contains(where: { !$0.images.isEmpty })
             ? settings.visionModel : settings.chatModel
@@ -703,8 +764,16 @@ struct ChatView: View {
             let full = try await ChatRunner.shared.run(req) { chunk in throttle.receive(chunk) }
             throttle.cancel()
             streamText = ""
-            if full.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix(SearchMarker.token) {
-                try await runWebSearch(question: history.last?.text ?? "", convID: convID, started: started)
+            let question = history.last?.text ?? ""
+            let markers = ChatMarkers.parse(full)
+            if !markers.isEmpty {
+                isStreaming = false
+                if markers.search {
+                    try await runWebSearch(question: question, convID: convID, started: started,
+                                           chart: markers.chart)
+                } else {
+                    await runChartFlow(question: question, hits: [], convID: convID, started: started)
+                }
                 return
             }
             if !full.isEmpty {
@@ -729,18 +798,14 @@ struct ChatView: View {
         }
     }
 
-    @MainActor func runWebSearch(question: String, convID: UUID, started: Date) async throws {
-        webStatus = L.t("web_searching")
-        defer { webStatus = nil }
+    @MainActor func runWebSearch(question: String, convID: UUID, started: Date, chart: Bool = false) async throws {
         let chatModel = settings.chatModel
         do {
-            let urls = try await WebSearch.search(question)
-            var hits: [WebHit] = []
-            for (i, u) in urls.enumerated() {
-                webStatus = "\(L.t("web_fetching")) (\(i + 1)/\(urls.count)) \(WebSearch.domain(of: u))"
-                if let h = try? await WebSearch.fetchText(u) { hits.append(h) }
+            let hits = try await gatherWebHits(question)
+            if chart {
+                await runChartFlow(question: question, hits: hits, convID: convID, started: started)
+                return
             }
-            guard hits.count >= 2 else { throw APIError(message: L.t("web_no_results")) }
             let req = try WebSearch.makeAnswerRequest(baseURL: settings.baseURL, key: settings.apiKey,
                                                       model: chatModel, question: question, hits: hits)
             webStatus = L.t("web_searching")
@@ -751,7 +816,7 @@ struct ChatView: View {
             let answer = try await ChatRunner.shared.run(req) { chunk in throttle.receive(chunk) }
             throttle.cancel()
             guard !answer.isEmpty else { throw APIError(message: L.t("web_no_answer")) }
-            let sources = hits.map { WebSource(title: $0.title, url: $0.url, domain: $0.domain) }
+            let sources = WebResearch.sources(from: hits)
             store.appendAssistant(answer, model: chatModel,
                                   elapsed: Date().timeIntervalSince(started), to: convID, sources: sources)
             maybeSpeak(answer)

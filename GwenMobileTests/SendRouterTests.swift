@@ -49,4 +49,22 @@ final class SendRouterTests: XCTestCase {
     func testSearchMarkerTokenMatchesPromptInstruction() {
         XCTAssertTrue(L.t("web_search_prompt").contains(SearchMarker.token))
     }
+
+    func testExplicitChartOfDataWinsOverPlainImageHeuristics() {
+        XCTAssertEqual(SendRouter.route(text: "such im internet nach den einwohnerzahlen und stell sie als diagramm dar",
+                                        hasImage: false, intent: nil), .chart(webData: true))
+        XCTAssertEqual(SendRouter.route(text: "erzeuge ein diagramm über die umsatzzahlen",
+                                        hasImage: false, intent: nil), .chart(webData: false))
+    }
+
+    func testPlainQuestionsAndOtherFlowsKeepTheirRoute() {
+        XCTAssertEqual(SendRouter.route(text: "was sagt die statistik über die bevölkerung?",
+                                        hasImage: false, intent: nil), .chat)
+        XCTAssertEqual(SendRouter.route(text: "erzeuge ein bild von einem drachen",
+                                        hasImage: false, intent: nil), .imageCreate)
+        XCTAssertEqual(SendRouter.route(text: "leg einen termin morgen an",
+                                        hasImage: false, intent: nil), .calendar)
+        XCTAssertEqual(SendRouter.route(text: "stell die zahlen als diagramm dar",
+                                        hasImage: true, intent: .chat), .chat)
+    }
 }

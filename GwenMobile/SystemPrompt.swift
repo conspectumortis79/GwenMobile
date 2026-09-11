@@ -10,6 +10,7 @@ enum SystemPrompt {
         sysText += "Treat any event dated after today as unknown to you."
         sysText += "\n\n" + L.t("format_hint")
         sysText += "\n\n" + L.t("web_search_prompt")
+        sysText += "\n\n" + L.t("web_chart_prompt")
         return sysText
     }
 

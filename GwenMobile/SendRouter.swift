@@ -1,9 +1,5 @@
 import Foundation
 
-enum SearchMarker {
-    static let token = "[[SEARCH]]"
-}
-
 enum ImageRoute: String, Sendable {
     case edit
     case create
@@ -14,12 +10,14 @@ enum SendRoute: Equatable {
     case imageEdit
     case imageCreate
     case calendar
+    case chart(webData: Bool)
     case chat
 }
 
 enum SendRouter {
     static func route(text: String, hasImage: Bool, intent: ImageRoute?) -> SendRoute {
         guard hasImage else {
+            if ChartIntent.looksLikeChartRequest(text) { return .chart(webData: ChartIntent.wantsWebData(text)) }
             if IntentHeuristics.looksLikeImageRequest(text) { return .imageCreate }
             if IntentHeuristics.looksLikeCalendarRequest(text) { return .calendar }
             return .chat

@@ -9,6 +9,7 @@ struct StoragePaths: Sendable {
 
     var images: URL { documents.appendingPathComponent("images", isDirectory: true) }
     var trash: URL { documents.appendingPathComponent(".trash", isDirectory: true) }
+    var answers: URL { documents.appendingPathComponent("answers", isDirectory: true) }
     var conversations: URL { documents.appendingPathComponent("conversations.json") }
     var apiKeySeed: URL { documents.appendingPathComponent("seed_api_key.txt") }
 

@@ -25,7 +25,8 @@ final class LocalizationTests: XCTestCase {
 
     func testWaitingLabelsLeaveTheEllipsisToTheAnimation() {
         let waitingKeys = ["processing", "asr_working", "generating_image", "editing_image",
-                           "cal_working", "web_searching", "web_fetching", "loading_models", "testing"]
+                           "cal_working", "making_chart", "web_searching", "web_fetching",
+                           "loading_models", "testing"]
         for key in waitingKeys {
             guard let values = L.strings[key] else {
                 XCTFail("Warteschleifen-Key fehlt: \(key)")

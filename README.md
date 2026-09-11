@@ -17,10 +17,33 @@ Swift 6, strict concurrency, iOS 17+.
   (bold, inline code, links) applied to the live stream as well; a marker that is still open,
   like `**` without its partner, simply stays plain text until the closing token arrives
 - Branded header: app icon beside the left-aligned "GwenMobile" title, actions right-aligned
+- One waiting indicator everywhere the AI is busy and you have to wait — the word
+  (`Verarbeite` / `Processing`, or the specific task such as `Erzeuge Bild`,
+  `Kümmere mich um den Termin`, `Ich suche im Internet`) plus three dots that count up
+  0 → 1 → 2 → 3 every 2 s, in place of any spinning wheel
+- Long-press any answer to store it as a Markdown file: it lands in `Documents/answers`
+  (visible in the Files app under *GwenMobile*, the app has file sharing enabled) and the
+  iOS share sheet opens as well, so it can go to Files, Mail or AirDrop in the same tap.
+  Sources of a web-search answer are appended as a numbered `## Quellen` section
 
 <img src="docs/screenshots/01-chat.png" alt="GwenMobile after launch: empty conversation, header with app icon and title, input bar with plus, mic and send" width="270"> <img src="docs/screenshots/02-plus-menu.png" alt="The plus menu opened above the input bar: Attach photo, Camera and Read aloud with its OFF state" width="270">
 
 *After launch (left) and the "+" menu with photo, camera and read-aloud (right).*
+
+### Data graphics from the web
+- Ask in one sentence — "such im Internet nach den Einwohnerzahlen und stell sie als Diagramm dar",
+  "look up the latest unemployment rates and plot them" — and the app runs the whole chain:
+  web search → page text → the chat model distils a **chart plan** (kind, title, unit, 2–8 label/value
+  pairs) from **the fetched numbers only** → that plan becomes the prompt for the image model → the
+  picture arrives in the chat with the data listed as text and the sources as clickable chips.
+- Two independent detection layers, so a chart wish is never missed and a plain question is never
+  hijacked: `ChartIntent` decides deterministically on phrasing (needs an explicit chart word such as
+  *Diagramm/Grafik/Chart/plot* **plus** a data or research word, and it honours rejections like
+  "kein Diagramm", "nur als Text"), and the chat model itself can answer with the protocol tokens
+  `[[CHART]]` or `[[SEARCH]][[CHART]]` for everything the phrase lists cannot see. If only the marker
+  fires, no search is done and the numbers come from the model's own knowledge.
+- The plan is validated, not trusted: values survive `1,5`, `1.234,56`, `1,234.56`, `42 %` and `12,345`,
+  broken points are dropped, fewer than two usable numbers aborts with a hint instead of drawing fiction.
 
 ### Images
 - Attach photos from camera or gallery; the vision model (e.g. qwen3.8-max) sees them
@@ -150,7 +173,8 @@ open GwenMobile.xcodeproj
 ## Tests
 The `GwenMobileTests` target holds the unit tests (pure logic: audio codec, intent
 heuristics, routing, request building, response decoding, error translation,
-localisation, storage, conversation store, stream throttling). No network, no device.
+localisation, storage, conversation store, stream throttling, answer export, the
+waiting-indicator rhythm). No network, no device.
 ```
 xcodegen generate
 xcodebuild test -scheme GwenMobile -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
