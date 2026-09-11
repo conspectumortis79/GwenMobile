@@ -16,8 +16,10 @@ struct RouteDecision: Equatable, Sendable {
 }
 
 enum ChatMarkers {
+    private static let decoration = CharacterSet(charactersIn: " \n\t-*\u{2022}>\u{201C}\u{201D}\"`\u{201E}\u{201A}")
+
     static func parse(_ text: String) -> RouteDecision {
-        var rest = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var rest = text.trimmingCharacters(in: decoration)
         var decision = RouteDecision()
         var consumed = true
         while consumed {
@@ -32,7 +34,7 @@ enum ChatMarkers {
     }
 
     static func strip(_ text: String) -> String {
-        var rest = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var rest = text.trimmingCharacters(in: decoration)
         var changed = true
         while changed {
             changed = false
@@ -45,6 +47,6 @@ enum ChatMarkers {
     }
 
     private static func remainder(after token: String, in text: String) -> String {
-        String(text.dropFirst(token.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        String(text.dropFirst(token.count)).trimmingCharacters(in: decoration)
     }
 }

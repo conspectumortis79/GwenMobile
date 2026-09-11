@@ -5,10 +5,7 @@ import SwiftUI
 @MainActor
 final class UndoBarHostTests: XCTestCase {
     private func makeStage(undoWindow: Duration) throws -> (HistoryCleaner, UUID) {
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
-        let paths = StoragePaths(documents: dir)
+        let paths = StoragePaths(documents: tempDocuments())
         let media = MediaStore(paths: paths)
         let store = ChatStore(media: media, paths: paths)
         let name = try XCTUnwrap(media.storeImageData(Data([1, 2, 3])))

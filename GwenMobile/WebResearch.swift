@@ -2,6 +2,8 @@ import Foundation
 
 @MainActor
 struct WebResearch {
+    static let minimumSourceCount = 1
+
     var onStatus: (String) -> Void
 
     func hits(for query: String) async throws -> [WebHit] {
@@ -11,7 +13,7 @@ struct WebResearch {
             onStatus("\(L.t("web_fetching")) (\(index + 1)/\(urls.count)) \(WebSearch.domain(of: url))")
             if let hit = try? await WebSearch.fetchText(url) { found.append(hit) }
         }
-        guard found.count >= 2 else { throw APIError(message: L.t("web_no_results")) }
+        guard found.count >= Self.minimumSourceCount else { throw APIError(message: L.t("web_no_results")) }
         return found
     }
 

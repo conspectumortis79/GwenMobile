@@ -3,7 +3,6 @@ import EventKit
 
 @MainActor
 enum CalendarService {
-    static let eventDateTimeFormat = "yyyy-MM-dd HH:mm"
     static let lookbackDays = 7
     static let lookaheadDays = 60
     static let findWindowPastDays = 40
@@ -39,7 +38,6 @@ enum CalendarService {
 
     static func upcomingContext() -> String {
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return "" }
-        let fmt = dateTimeFormatter()
         let secondsPerDay = 86400.0
         let predicate = store.predicateForEvents(withStart: Date().addingTimeInterval(-Double(lookbackDays) * secondsPerDay),
                                                  end: Date().addingTimeInterval(Double(lookaheadDays) * secondsPerDay),
@@ -50,20 +48,19 @@ enum CalendarService {
         return events.map { ev in
             let mins = alertMinutes(for: ev)
             let alerts = mins.isEmpty ? "none" : mins.map { "\($0) min before" }.joined(separator: ", ")
-            return "- \(ev.title ?? "") — \(fmt.string(from: ev.startDate)) — notifications: \(alerts) — calendar: \(ev.calendar.title)"
+            return "- \(ev.title ?? "") — \(Formatters.eventDateTime(ev.startDate)) — notifications: \(alerts) — calendar: \(ev.calendar.title)"
         }.joined(separator: "\n")
     }
 
     static func perform(_ plan: QwenAPI.CalendarPlan) async throws -> String {
         guard await ensureAccess() else { throw APIError(message: L.t("cal_denied")) }
-        let fmt = dateTimeFormatter()
 
         switch plan.action {
         case .create:
-            guard let start = plan.start.flatMap({ fmt.date(from: $0) }) else {
+            guard let start = plan.start.flatMap({ Formatters.eventDate(from: $0) }) else {
                 throw APIError(message: L.t("cal_no_date"))
             }
-            let end = plan.end.flatMap { fmt.date(from: $0) } ?? start.addingTimeInterval(Double(defaultDurationMinutes) * 60)
+            let end = plan.end.flatMap { Formatters.eventDate(from: $0) } ?? start.addingTimeInterval(Double(defaultDurationMinutes) * 60)
             let ev = EKEvent(eventStore: store)
             ev.title = plan.title ?? L.t("cal_default_title")
             ev.startDate = start
@@ -80,10 +77,10 @@ enum CalendarService {
             let keepMinutes = alertMinutes(for: ev)
             let oldStart = ev.startDate
             if let t = plan.title { ev.title = t }
-            if let start = plan.start.flatMap({ fmt.date(from: $0) }) {
+            if let start = plan.start.flatMap({ Formatters.eventDate(from: $0) }) {
                 let dur = max(60, ev.endDate.timeIntervalSince(ev.startDate))
                 ev.startDate = start
-                ev.endDate = plan.end.flatMap({ fmt.date(from: $0) }) ?? start.addingTimeInterval(dur)
+                ev.endDate = plan.end.flatMap({ Formatters.eventDate(from: $0) }) ?? start.addingTimeInterval(dur)
             }
             if let loc = plan.location { ev.location = loc }
             if let notes = plan.notes { ev.notes = notes }
@@ -127,13 +124,6 @@ enum CalendarService {
         case .unmatched(let asked):
             throw APIError(message: L.fmt2("cal_calendar_missing", asked, titles.joined(separator: ", ")))
         }
-    }
-
-    private static func dateTimeFormatter() -> DateFormatter {
-        let fmt = DateFormatter()
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.dateFormat = eventDateTimeFormat
-        return fmt
     }
 
     private static func alarms(minutesBefore: [Int], for ev: EKEvent) -> [EKAlarm] {
@@ -184,13 +174,7 @@ enum CalendarService {
     }
 
     private static func describe(_ ev: EKEvent) -> String {
-        let d = DateFormatter()
-        d.locale = L.lang.locale
-        d.dateFormat = L.calStartFormat
-        let endFmt = DateFormatter()
-        endFmt.locale = L.lang.locale
-        endFmt.dateFormat = L.timeFormat
-        var s = "\(ev.title ?? "") — \(d.string(from: ev.startDate))–\(endFmt.string(from: ev.endDate))"
+        var s = "\(ev.title ?? "") — \(Formatters.eventStart(ev.startDate))–\(Formatters.time(ev.endDate))"
         if let loc = ev.location, !loc.isEmpty { s += " · \(loc)" }
         s += "\n" + L.fmt("cal_calendar", ev.calendar.title)
         if let alerts = alertSummary(for: ev) { s += "\n\(alerts)" }

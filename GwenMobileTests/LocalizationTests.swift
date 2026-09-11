@@ -73,6 +73,14 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(error.openSettings)
     }
 
+    func testTLSResetIsReportedAsABlockedSearchEngine() {
+        XCTAssertEqual(L.friendlyError("A TLS error caused the secure connection to fail.").message,
+                       L.t("net_tls_blocked"))
+        XCTAssertTrue(L.friendlyError("A TLS error caused the secure connection to fail.").detail
+                      .contains("TLS error"))
+        XCTAssertFalse(L.friendlyError("A TLS error caused the secure connection to fail.").openSettings)
+    }
+
     func testMicrophoneAndNetworkAndRecordingLengthMappings() {
         XCTAssertEqual(L.friendlyError("AVAudioSession is not authorized to record audio.").message, L.t("mic_denied"))
         XCTAssertEqual(L.friendlyError("not connected to the internet").message, L.t("net_error"))

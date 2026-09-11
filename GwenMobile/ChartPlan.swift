@@ -133,7 +133,7 @@ struct ChartPlan: Decodable, Equatable, Sendable {
     }
 }
 
-struct LooseNumber: Decodable {
+private struct LooseNumber: Decodable {
     var number: Double?
     var label: String?
 

@@ -3,7 +3,6 @@ import Foundation
 struct AnswerExporter {
     static let maxTitleWords = 9
     static let fallbackPrefix = "antwort"
-    private static let fileNamePattern = "yyyy-MM-dd-HHmmss"
 
     private let paths: StoragePaths
     private let fileManager: FileManager
@@ -28,11 +27,7 @@ struct AnswerExporter {
     }
 
     static func timestampedName(date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = fileNamePattern
-        return "\(fallbackPrefix)-\(formatter.string(from: date)).html"
+        "\(fallbackPrefix)-\(Formatters.fileStamp(date)).html"
     }
 
     func write(text: String, sources: [WebSource], question: String?, model: String? = nil,

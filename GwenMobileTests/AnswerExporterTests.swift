@@ -8,18 +8,6 @@ final class AnswerExporterTests: XCTestCase {
         L.apply(.de)
     }
 
-    private func tempDocuments() -> URL {
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
-        return dir
-    }
-
-    private func source(_ title: String, _ url: String, _ domain: String) -> WebSource {
-        WebSource(title: title, url: url, domain: domain)
-    }
-
     func testTitleIsTheQuestionWithoutPunctuation() {
         XCTAssertEqual(AnswerExporter.title(from: "Wie viele Arbeitslose gab es?!"),
                        "Wie viele Arbeitslose gab es")
@@ -51,7 +39,7 @@ final class AnswerExporterTests: XCTestCase {
         XCTAssertEqual(paths.answers.path, paths.documents.appendingPathComponent("answers").path)
         let url = try AnswerExporter(paths: paths).write(
             text: "Die **Hauptstadt** ist Paris.\n\n- Ein Punkt\n- Noch einer",
-            sources: [source("Beleg", "https://example.org/a", "example.org")],
+            sources: [Fixtures.source("Beleg", "https://example.org/a", "example.org")],
             question: "Was ist die Hauptstadt von Frankreich?",
             model: "qwen3.8-flash", elapsed: 4.2, time: "13:41")
         XCTAssertEqual(url.lastPathComponent, "Was ist die Hauptstadt von Frankreich.html")

@@ -72,6 +72,10 @@ enum L {
             || low.contains("quota") || low.contains("429") {
             return fe("err_rate_limited")
         }
+        if low.contains("tls error") || low.contains("secure connection")
+            || low.contains("ssl") || low.contains("connection reset") {
+            return fe("net_tls_blocked")
+        }
         if low.contains("could not be found") || low.contains("network connection")
             || low.contains("not connected to the internet") || low.contains("wifi appears to be turned off")
             || low.contains("a server with the specified hostname") || low.contains("offline")
@@ -185,6 +189,8 @@ enum L {
         "read_aloud": [.de: "Vorlesen", .en: "Read aloud"],
         "state_on": [.de: "AN", .en: "ON"],
         "state_off": [.de: "AUS", .en: "OFF"],
+        "net_tls_blocked": [.de: "Der Server hat die Verbindung beim Aufbau zurückgesetzt (TLS) — meist ein kurzzeitiges Limit seinerseits. Bitte in etwa einer Minute erneut versuchen.",
+                            .en: "The server reset the connection while it was being established (TLS) — usually a short-lived limit on its side. Please retry in about a minute."],
         "net_error": [.de: "Keine Verbindung zum Server — bitte Netzwerk prüfen.",
                       .en: "Could not reach the server — please check your network."],
         "image_mode_hint": [.de: "Wird automatisch genutzt, wenn du ein Bild mitschickst und eine Änderung beschreibst oder ein neues Bild erfindest.",
@@ -195,7 +201,6 @@ enum L {
         "editing_image": [.de: "Bearbeite dein Bild", .en: "Editing your image"],
         "edit_this": [.de: "Bearbeiten", .en: "Edit"],
         "history": [.de: "Verläufe", .en: "Histories"],
-        "history_empty": [.de: "Noch keine Verläufe.", .en: "No histories yet."],
         "delete_message": [.de: "Nachricht löschen", .en: "Delete message"],
         "delete_conversation": [.de: "Unterhaltung löschen", .en: "Delete conversation"],
         "delete_all": [.de: "Alle Verläufe löschen", .en: "Delete all histories"],
@@ -209,6 +214,8 @@ enum L {
         "storage_history": [.de: "Verlauf", .en: "History"],
         "freed": [.de: "%@ freigegeben", .en: "%@ freed"],
         "undo": [.de: "Rückgängig", .en: "Undo"],
+        "storage_save_failed": [.de: "Unterhaltungen konnten nicht gespeichert werden — bitte Speicherplatz prüfen.",
+                          .en: "The conversations could not be saved — please check the available storage."],
         "cal_working": [.de: "Kümmere mich um den Termin", .en: "Handling the appointment"],
         "cal_created": [.de: "✔ Termin angelegt: %@", .en: "✔ Appointment created: %@"],
         "cal_updated": [.de: "✔ Termin geändert: %@", .en: "✔ Appointment changed: %@"],

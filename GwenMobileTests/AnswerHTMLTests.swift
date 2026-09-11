@@ -8,10 +8,6 @@ final class AnswerHTMLTests: XCTestCase {
         L.apply(.de)
     }
 
-    private func source(_ title: String, _ url: String, _ domain: String) -> WebSource {
-        WebSource(title: title, url: url, domain: domain)
-    }
-
     func testInlineMarkdownBecomesRealFormatting() {
         XCTAssertEqual(AnswerHTML.inline("Die **BRD** wurde *1949* gegründet und `Art 1` gilt."),
                        "Die <strong>BRD</strong> wurde <em>1949</em> gegründet und <code>Art 1</code> gilt.")
@@ -70,14 +66,14 @@ final class AnswerHTMLTests: XCTestCase {
     }
 
     func testFootnoteReferencesLinkToTheSourceList() {
-        let sources = [source("A", "https://a.test", "a.test"), source("B", "https://b.test", "b.test")]
+        let sources = [Fixtures.source("A", "https://a.test", "a.test"), Fixtures.source("B", "https://b.test", "b.test")]
         XCTAssertEqual(AnswerHTML.inline("Belegt [1] und [2] und [7].", sources: sources),
                        "Belegt <a href=\"#quelle-1\">[1]</a> und <a href=\"#quelle-2\">[2]</a> und [7].")
     }
 
     func testSourceListRendersTitlesAndSkipsUnsafeURLs() {
-        let sources = [source("Statista", "https://statista.test/x", "statista.test"),
-                       source("", "javascript:alert(1)", "evil.test")]
+        let sources = [Fixtures.source("Statista", "https://statista.test/x", "statista.test"),
+                       Fixtures.source("", "javascript:alert(1)", "evil.test")]
         let html = AnswerHTML.sourceList(sources: sources, heading: "Quellen")
         XCTAssertTrue(html.contains("<section class=\"quellen\"><h3>Quellen</h3><ol>"))
         XCTAssertTrue(html.contains("<li id=\"quelle-1\"><a href=\"https://statista.test/x\">Statista</a>"))
@@ -87,7 +83,7 @@ final class AnswerHTMLTests: XCTestCase {
 
     func testDocumentCarriesLanguageStylesheetAndMeta() {
         let html = AnswerHTML.document(text: "Antwort **mit** Fett",
-                                       sources: [source("A", "https://a.test", "a.test")],
+                                       sources: [Fixtures.source("A", "https://a.test", "a.test")],
                                        heading: "Quellen",
                                        title: "Was ist die Hauptstadt <von> Frankreich? & Co.",
                                        meta: AnswerHTML.metaLine(model: "qwen3.8-flash", elapsed: 22.24, time: "13:41"),

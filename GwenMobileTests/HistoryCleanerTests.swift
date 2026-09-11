@@ -5,10 +5,7 @@ import XCTest
 final class HistoryCleanerTests: XCTestCase {
     private func makeSandbox(undoWindow: Duration? = nil)
         -> (ChatStore, HistoryCleaner, MediaStore, StoragePaths) {
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
-        let paths = StoragePaths(documents: dir)
+        let paths = StoragePaths(documents: tempDocuments())
         let media = MediaStore(paths: paths)
         let store = ChatStore(media: media, paths: paths)
         let cleaner = undoWindow.map { HistoryCleaner(store: store, media: media, feed: store.images,

@@ -178,9 +178,6 @@ enum QwenAPI {
                              instruction: String,
                              history: [ChatMessage] = [], events: String = "",
                              calendars: String = "") async throws -> CalendarPlan? {
-        let nowFmt = DateFormatter()
-        nowFmt.locale = Locale(identifier: "en_US_POSIX")
-        nowFmt.dateFormat = "yyyy-MM-dd HH:mm EEEE"
         let offset = TimeZone.current.secondsFromGMT()
         let oh = offset / 3600, om = abs(offset % 3600 / 60)
         let tz = String(format: "UTC%@%02d:%02d", offset < 0 ? "-" : "+", abs(oh), om)
@@ -201,7 +198,7 @@ enum QwenAPI {
         let sys = """
         You are the calendar router of a chat app. Decide whether the user message asks to \
         create, change or delete a calendar appointment or reminder.
-        Current local date & time: \(nowFmt.string(from: Date())) (\(tz)). Times you output are local, 24h.\(ctx)
+        Current local date & time: \(Formatters.planNow(Date())) (\(tz)). Times you output are local, 24h.\(ctx)
         Reply with ONLY one JSON object, no markdown fences:
         {"action":"create|update|delete|none","title":"...","start":"YYYY-MM-DD HH:MM",\
         "end":"YYYY-MM-DD HH:MM","location":"...","notes":"...","alerts":[60],\

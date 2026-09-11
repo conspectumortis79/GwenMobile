@@ -20,6 +20,15 @@ final class ChatMarkersTests: XCTestCase {
                        RouteDecision(search: true, chart: true))
     }
 
+    func testMarkersSurviveMarkdownDecorationInFrontOfThem() {
+        XCTAssertEqual(ChatMarkers.parse("- [[SEARCH]]"), RouteDecision(search: true))
+        XCTAssertEqual(ChatMarkers.parse("* [[CHART]]"), RouteDecision(chart: true))
+        XCTAssertEqual(ChatMarkers.parse("\u{2022}  [[SEARCH]] [[CHART]]"),
+                       RouteDecision(search: true, chart: true))
+        XCTAssertEqual(ChatMarkers.parse("> `[[SEARCH]]`"), RouteDecision(search: true))
+        XCTAssertEqual(ChatMarkers.parse("„[[CHART]]“"), RouteDecision(chart: true))
+    }
+
     func testMarkerOnlyInRunningTextIsIgnored() {
         XCTAssertEqual(ChatMarkers.parse("Hier die Zahlen. [[CHART]] danach kommt nichts mehr."),
                        RouteDecision())
