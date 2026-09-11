@@ -21,9 +21,9 @@ final class AnswerErrorTests: XCTestCase {
     func testWebFailureIsNeverReportedAsImageGeneration() {
         let text = AnswerError.other("A TLS error caused the secure connection to fail.",
                                     generic: L.t("err_web_generic"))
-        XCTAssertTrue(text.contains(L.t("err_web_generic")))
-        XCTAssertFalse(text.contains(L.t("err_generic")))
-        XCTAssertFalse(text.contains(L.t("err_timeout")))
+        XCTAssertTrue(text.contains(L.t("net_tls_blocked")), text)
+        XCTAssertFalse(text.contains(L.t("err_generic")), text)
+        XCTAssertFalse(text.contains(L.t("err_timeout")), text)
     }
 
     func testTranslatedAPIErrorWinsOverTheContextPrefix() {

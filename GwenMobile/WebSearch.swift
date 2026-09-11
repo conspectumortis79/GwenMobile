@@ -13,6 +13,7 @@ enum WebSearch {
     static let searchUA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
     static let scanLimit = 8
     static let resultLimit = 3
+    static let minimumResultCount = 1
     static let maxTextChars = 4000
     static let minTextChars = 200
     static let blockedDomains: Set<String> = [
@@ -55,7 +56,7 @@ enum WebSearch {
             results.append(u)
             if results.count >= scanLimit { break }
         }
-        guard results.count >= 2 else { throw APIError(message: L.t("web_no_results")) }
+        guard results.count >= Self.minimumResultCount else { throw APIError(message: L.t("web_no_results")) }
         return Array(results.prefix(resultLimit))
     }
 
@@ -127,8 +128,9 @@ enum WebSearch {
     private static func researchInstructions() -> String {
         "Du bist ein Recherche-Assistent. Beantworte die Frage des Nutzers AUSSCHLIESSLICH auf Basis "
             + "der angegebenen Web-Quellen. Zitiere jede Aussage mit der Quellennummer in eckigen Klammern, "
-            + "z. B. [1] oder [2][3]. Nutze mindestens 2 verschiedene Quellen fuer die Kernantwort; wenn sich "
-            + "Quellen widersprechen, nenne den Widerspruch kurz. Antworte in der Sprache der Frage, sachlich "
+            + "z. B. [1] oder [2][3]. Nutze mindestens zwei Quellen fuer die Kernantwort, wenn es sie gibt; wenn sich "
+            + "Quellen widersprechen, nenne den Widerspruch kurz. Gibt es nur eine Quelle, nutze sie und sage das "
+            + "in einem Halbsatz. Antworte in der Sprache der Frage, sachlich "
             + "und kompakt (max. 150 Woertern). Wenn die Quellen die Frage nicht beantworten, sage das ehrlich. "
             + "Strukturiere die Antwort übersichtlich: kurze Absätze durch Leerzeilen getrennt, mehrere Punkte "
             + "als Aufzählung (- am Zeilenanfang), Schlüsselbegriffe und Zahlen **fett**, keine Markdown-Überschriften."

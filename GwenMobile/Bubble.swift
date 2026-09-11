@@ -84,11 +84,7 @@ struct Bubble: View, Equatable {
                         VStack(alignment: isUser ? .trailing : .leading, spacing: 6) {
                             ForEach(images, id: \.file) { att in
                                 AttachmentImage(att: att)
-                                    .contextMenu {
-                                        Button { shareImage(att) } label: {
-                                            Label(L.t("send_via_airdrop"), systemImage: "paperplane")
-                                        }
-                                    }
+                                    .contextMenu { imageActions(att, library: false) }
                             }
                         }
                     }
@@ -96,19 +92,7 @@ struct Bubble: View, Equatable {
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(outImages, id: \.file) { att in
                                 AttachmentImage(att: att, fit: true)
-                                    .contextMenu {
-                                        Button { shareImage(att) } label: {
-                                            Label(L.t("send_via_airdrop"), systemImage: "paperplane")
-                                        }
-                                        Button { saveAttachment(att) } label: {
-                                            Label(L.t("save_to_photos"), systemImage: "square.and.arrow.down")
-                                        }
-                                        if let onEdit {
-                                            Button { onEdit(att) } label: {
-                                                Label(L.t("edit_this"), systemImage: "pencil")
-                                            }
-                                        }
-                                    }
+                                    .contextMenu { imageActions(att, library: true) }
                             }
                             HStack(spacing: 14) {
                                 ForEach(Array(outImages.enumerated()), id: \.offset) { _, att in
@@ -124,7 +108,7 @@ struct Bubble: View, Equatable {
                     }
                     if streaming && text.isEmpty {
                         ProcessingLabel(text: L.t("processing"))
-                            .foregroundStyle(isUser ? Color.white : Color.primary)
+                            .foregroundStyle(Color.primary)
                             .padding(.horizontal, 16).padding(.vertical, 14)
                             .background(bubbleColor)
                             .clipShape(BubbleShape(isUser: isUser))
@@ -199,6 +183,22 @@ struct Bubble: View, Equatable {
         }
     }
 
+    @ViewBuilder private func imageActions(_ att: Attachment, library: Bool) -> some View {
+        Button { shareImage(att) } label: {
+            Label(L.t("send_via_airdrop"), systemImage: "paperplane")
+        }
+        if library {
+            Button { saveAttachment(att) } label: {
+                Label(L.t("save_to_photos"), systemImage: "square.and.arrow.down")
+            }
+            if let onEdit {
+                Button { onEdit(att) } label: {
+                    Label(L.t("edit_this"), systemImage: "pencil")
+                }
+            }
+        }
+    }
+
     private func shareImage(_ att: Attachment) {
         guard let url = media?.storedURL(for: att) else {
             shareFailure = L.t("image_gone")
@@ -265,11 +265,10 @@ struct Bubble: View, Equatable {
         let key = "s\(sources.count)\u{1}\(text)" as NSString
         if let hit = Self.mdCache.object(forKey: key) { return Text(hit.value) }
         var attr = MarkdownRenderer.inline(text)
-        if !isUser && !sources.isEmpty {
+        if !isUser && !sources.isEmpty, let regex = Self.footnoteRegex {
             let plain: String = String(attr.characters)
             let ns = plain as NSString
-            let marks = Self.footnoteRegex.matches(in: plain,
-                                                   range: NSRange(location: 0, length: ns.length))
+            let marks = regex.matches(in: plain, range: NSRange(location: 0, length: ns.length))
             for m in marks.reversed() {
                 guard let r = Range(m.range, in: attr),
                       let n = Int(ns.substring(with: m.range(at: 1))),
@@ -282,7 +281,7 @@ struct Bubble: View, Equatable {
         return Text(attr)
     }
 
-    static let footnoteRegex = try! NSRegularExpression(pattern: "\\[(\\d{1,2})\\]")
+    static let footnoteRegex = try? NSRegularExpression(pattern: "\\[(\\d{1,2})\\]")
 
     private var footnoteOpener: OpenURLAction {
         OpenURLAction { url in

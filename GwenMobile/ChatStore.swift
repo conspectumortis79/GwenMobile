@@ -4,6 +4,7 @@ import Foundation
 final class ChatStore: ObservableObject {
     @Published var conversations: [Conversation] = []
     @Published var currentID: UUID?
+    @Published private(set) var storageProblem: String?
 
     let media: MediaStore
     let images: ImageFeed
@@ -120,7 +121,15 @@ final class ChatStore: ObservableObject {
     }
 
     private func saveNow() {
-        guard let data = try? JSONEncoder().encode(conversations) else { return }
-        try? data.write(to: paths.conversations, options: .atomic)
+        do {
+            let data = try JSONEncoder().encode(conversations)
+            try data.write(to: paths.conversations, options: .atomic)
+            storageProblem = nil
+        } catch {
+            storageProblem = L.t("storage_save_failed")
+            flowLog.error("SAVE fehlgeschlagen \(error.localizedDescription, privacy: .public)")
+        }
     }
+
+    func dismissStorageProblem() { storageProblem = nil }
 }

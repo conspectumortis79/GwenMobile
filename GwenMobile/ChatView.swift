@@ -78,6 +78,14 @@ struct ChatView: View {
             Text((e?.message ?? "") + (e?.detail.isEmpty == false ? "\n\n\(e!.detail)" : ""))
                 .font(.system(size: 13))
         }
+        .alert(L.t("error"), isPresented: Binding(
+            get: { store.storageProblem != nil },
+            set: { if !$0 { store.dismissStorageProblem() } }
+        )) {
+            Button(L.t("ok"), role: .cancel) { store.dismissStorageProblem() }
+        } message: {
+            Text(verbatim: store.storageProblem ?? "")
+        }
         .overlay {
             if attachMenu {
                 ZStack(alignment: .bottomLeading) {
@@ -327,7 +335,7 @@ struct ChatView: View {
         let day: String
         if cal.isDateInToday(date) { day = L.t("today") }
         else if cal.isDateInYesterday(date) { day = L.t("yesterday") }
-        else { day = Self.dayFormatter().string(from: date) }
+        else { day = Formatters.day(date) }
         return Text(verbatim: "\(day) · \(Self.timeString( date))")
             .font(.system(size: 11))
             .foregroundStyle(Color(.tertiaryLabel))
@@ -628,24 +636,12 @@ struct ChatView: View {
         let key = settings.apiKey
         let imageModel = settings.imageModel
         let text = prompt.isEmpty ? L.t("image_default_prompt") : prompt
-        let media = store.media
+        let delivery = ImageDelivery(media: store.media)
         do {
-            let req = try await Task.detached(priority: .userInitiated) {
-                try QwenAPI.makeImageRequest(baseURL: baseURL, key: key,
-                                             model: imageModel,
-                                             prompt: text,
-                                             inputImages: images,
-                                             isEdit: isEdit)
-            }.value
-            let urls = try await QwenAPI.generateImage(req: req)
+            let urls = try await delivery.generate(baseURL: baseURL, key: key, model: imageModel,
+                                                  prompt: text, inputImages: images, isEdit: isEdit)
             flowMark("IMAGEFLOW generated urls=\(urls.count)")
-            var outAtts: [Attachment] = []
-            for u in urls {
-                let data = try await QwenAPI.download(u)
-                if let name = media.storeImageData(data) {
-                    outAtts.append(Attachment(file: name))
-                }
-            }
+            let outAtts = try await delivery.store(urls)
             guard !outAtts.isEmpty else {
                 alertError = L.FriendlyError(message: L.t("no_image"), detail: "", openSettings: false)
                 return
@@ -715,9 +711,14 @@ struct ChatView: View {
             let hits = try await gatherWebHits(question)
             await runChartFlow(question: question, hits: hits, convID: convID, started: started)
         } catch {
-            store.appendAssistant(AnswerError.other(error.localizedDescription, generic: L.t("err_web_generic")),
-                                  model: chatModel, elapsed: Date().timeIntervalSince(started), to: convID)
+            appendWebFailure(error, model: chatModel, convID: convID, started: started)
         }
+    }
+
+    @MainActor private func appendWebFailure(_ error: Error, model: String?,
+                                             convID: UUID, started: Date) {
+        store.appendAssistant(AnswerError.other(error.localizedDescription, generic: L.t("err_web_generic")),
+                              model: model, elapsed: Date().timeIntervalSince(started), to: convID)
     }
 
     @MainActor private func runChartFlow(question: String, hits: [WebHit], history: [ChatMessage] = [],
@@ -727,7 +728,7 @@ struct ChatView: View {
         defer { imageWorking = false; workingLabelOverride = nil }
         let chatModel = settings.chatModel
         let imageModel = settings.imageModel
-        let media = store.media
+        let delivery = ImageDelivery(media: store.media)
         let prior = WebResearch.priorResearch(from: history)
         let digest = hits.isEmpty ? prior.digest : WebResearch.dataDigest(from: hits)
         let sources = hits.isEmpty ? prior.sources : WebResearch.sources(from: hits)
@@ -738,15 +739,9 @@ struct ChatView: View {
                 throw APIError(message: L.t("chart_no_data"))
             }
             flowMark("CHART plan kind=\(plan.kind.rawValue) points=\(plan.points.count) web=\(hits.count) daten=\(digest.count)")
-            let req = try QwenAPI.makeImageRequest(baseURL: settings.baseURL, key: settings.apiKey,
-                                                   model: imageModel, prompt: plan.imagePrompt(),
-                                                   inputImages: [], isEdit: false)
-            let urls = try await QwenAPI.generateImage(req: req)
-            var attachments: [Attachment] = []
-            for u in urls {
-                let data = try await QwenAPI.download(u)
-                if let name = media.storeImageData(data) { attachments.append(Attachment(file: name)) }
-            }
+            let urls = try await delivery.generate(baseURL: settings.baseURL, key: settings.apiKey,
+                                                   model: imageModel, prompt: plan.imagePrompt())
+            let attachments = try await delivery.store(urls)
             guard !attachments.isEmpty else { throw APIError(message: L.t("no_image")) }
             let answer = plan.summary(sources: sources)
             store.appendAssistant(answer, model: imageModel, elapsed: Date().timeIntervalSince(started),
@@ -855,8 +850,7 @@ struct ChatView: View {
                                   elapsed: Date().timeIntervalSince(started), to: convID, sources: sources)
             maybeSpeak(answer)
         } catch {
-            store.appendAssistant(AnswerError.other(error.localizedDescription, generic: L.t("err_web_generic")), model: chatModel,
-                                  elapsed: Date().timeIntervalSince(started), to: convID)
+            appendWebFailure(error, model: chatModel, convID: convID, started: started)
         }
     }
 
@@ -866,28 +860,5 @@ struct ChatView: View {
                      model: settings.audioModel, voice: settings.ttsVoice)
     }
 
-    static func timeString(_ date: Date) -> String {
-        let lang = L.lang
-        if fmtCache[lang] == nil {
-            let f = DateFormatter()
-            f.locale = lang.locale
-            f.dateFormat = L.timeFormat
-            fmtCache[lang] = f
-        }
-        return fmtCache[lang]!.string(from: date)
-    }
-
-    @MainActor static func dayFormatter() -> DateFormatter {
-        let lang = L.lang
-        if dayFmtCache[lang] == nil {
-            let f = DateFormatter()
-            f.locale = lang.locale
-            f.dateFormat = L.dayFormat
-            dayFmtCache[lang] = f
-        }
-        return dayFmtCache[lang]!
-    }
-
-    @MainActor static var fmtCache: [AppLanguage: DateFormatter] = [:]
-    @MainActor static var dayFmtCache: [AppLanguage: DateFormatter] = [:]
+    static func timeString(_ date: Date) -> String { Formatters.time(date) }
 }

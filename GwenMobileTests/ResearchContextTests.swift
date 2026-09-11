@@ -8,17 +8,25 @@ final class ResearchContextTests: XCTestCase {
         L.apply(.de)
     }
 
-    private func hit(_ title: String, _ url: String, _ domain: String, _ text: String) -> WebHit {
-        WebHit(title: title, url: url, domain: domain, text: text)
+    func testOneReadableSourceIsEnough() {
+        XCTAssertEqual(WebResearch.minimumSourceCount, 1)
+        XCTAssertEqual(WebSearch.minimumResultCount, 1)
+        XCTAssertTrue(L.t("web_search_prompt").contains(SearchMarker.token))
     }
 
-    private func source(_ title: String, _ url: String, _ domain: String) -> WebSource {
-        WebSource(title: title, url: url, domain: domain)
+    func testResearchPromptHandlesASingleSource() throws {
+        let request = try WebSearch.makeAnswerRequest(baseURL: "https://api.test/v1", key: "k", model: "m",
+                                                      question: "frage",
+                                                      hits: [Fixtures.hit("T", "https://a.test", "a.test", "text")])
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
+        let messages = try XCTUnwrap(body["messages"] as? [[String: Any]])
+        let system = try XCTUnwrap(messages.first?["content"] as? String)
+        XCTAssertTrue(system.contains("Gibt es nur eine Quelle, nutze sie"))
     }
 
     func testHitsDigestNamesEverySourceAndIsCapped() {
-        let hits = [hit("Statista", "https://statista.test/a", "statista.test", "83,2 Millionen Menschen"),
-                    hit("Wikipedia", "https://de.wikipedia.test/b", "wikipedia.test", "84,7 Millionen im Jahr 2024")]
+        let hits = [Fixtures.hit("Statista", "https://statista.test/a", "statista.test", "83,2 Millionen Menschen"),
+                    Fixtures.hit("Wikipedia", "https://de.wikipedia.test/b", "wikipedia.test", "84,7 Millionen im Jahr 2024")]
         let digest = WebResearch.dataDigest(from: hits)
         XCTAssertTrue(digest.contains("## Quelle [1] Statista — statista.test"))
         XCTAssertTrue(digest.contains("83,2 Millionen Menschen"))
@@ -30,7 +38,7 @@ final class ResearchContextTests: XCTestCase {
 
     func testPriorResearchFeedsThePreviousAnswerAndItsSources() {
         let answer = ChatMessage(role: .assistant, text: "2020: 83,2 Mio.\n2024: 84,7 Mio.",
-                                 sources: [source("Statista", "https://statista.test/e", "statista.test")])
+                                 sources: [Fixtures.source("Statista", "https://statista.test/e", "statista.test")])
         let history = [ChatMessage(role: .user, text: "Wie viele Einwohner hat Deutschland?"), answer]
         let prior = WebResearch.priorResearch(from: history)
         XCTAssertTrue(prior.digest.contains("## Gespeicherte Antwort"))
@@ -45,7 +53,7 @@ final class ResearchContextTests: XCTestCase {
         for index in 1...4 {
             history.append(ChatMessage(role: .user, text: "frage \(index)"))
             history.append(ChatMessage(role: .assistant, text: "antwort \(index)",
-                                       sources: index < 4 ? [source("Alt\(index)", "https://alt.test", "alt.test")] : nil))
+                                       sources: index < 4 ? [Fixtures.source("Alt\(index)", "https://alt.test", "alt.test")] : nil))
         }
         history.append(ChatMessage(role: .assistant, text: "   "))
         let prior = WebResearch.priorResearch(from: history)

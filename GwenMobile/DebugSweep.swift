@@ -266,6 +266,22 @@ extension ChatView {
     func runSearchOnceProbe() async {
         UIApplication.shared.isIdleTimerDisabled = true
         var report = SweepReport()
+        for (lauf, frage) in ["Wann wurde die Bundesrepublik Deutschland gegründet?",
+                               "Wie viele Arbeitslose gab es in Deutschland in den letzten zwei Jahren?"].enumerated() {
+            let t0 = ContinuousClock.now
+            do {
+                let urls = try await WebSearch.search(frage)
+                report.add("STUFE_SUCHE\(lauf)", "urls=\(urls.count) hosts=\(urls.map { WebSearch.domain(of: $0) }.joined(separator: ","))"
+                           + " ms=\(msOf(t0.duration(to: .now)))")
+                for u in urls {
+                    let t1 = ContinuousClock.now
+                    do {
+                        let hit = try await WebSearch.fetchText(u)
+                        report.add("STUFE_SEITE\(lauf)", "host=\(hit.domain) zeichen=\(hit.text.count) ms=\(msOf(t1.duration(to: .now)))")
+                    } catch { report.addFailure("STUFE_SEITE\(lauf)_\(WebSearch.domain(of: u))", error) }
+                }
+            } catch { report.addFailure("STUFE_SUCHE\(lauf)", error) }
+        }
         store.newConversation()
         input = "Wie viele Arbeitslose gab es in Deutschland in den letzten zwei Jahren?"
         await send()

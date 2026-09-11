@@ -4,11 +4,21 @@ import XCTest
 @MainActor
 final class ChatStoreTests: XCTestCase {
     private func makeSandbox() -> (ChatStore, StoragePaths) {
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
-        let paths = StoragePaths(documents: dir)
-        return (ChatStore(media: MediaStore(paths: paths), paths: paths), paths)
+        makeSandbox(at: StoragePaths(documents: tempDocuments()))
+    }
+
+    private func makeSandbox(at paths: StoragePaths) -> (ChatStore, StoragePaths) {
+        (ChatStore(media: MediaStore(paths: paths), paths: paths), paths)
+    }
+
+    func testUnwritableStoreReportsAStorageProblem() async throws {
+        let paths = StoragePaths(documents: tempDocuments())
+        try FileManager.default.createDirectory(at: paths.conversations, withIntermediateDirectories: true)
+        let (store, _) = makeSandbox(at: paths)
+        XCTAssertNil(store.storageProblem)
+        store.newConversation()
+        try await Task.sleep(for: .milliseconds(700))
+        XCTAssertEqual(store.storageProblem, L.t("storage_save_failed"))
     }
 
     func testInitStartsWithOneFreshConversation() {

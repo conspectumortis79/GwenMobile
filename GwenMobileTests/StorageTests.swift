@@ -3,14 +3,6 @@ import XCTest
 
 @MainActor
 final class StorageTests: XCTestCase {
-    private func tempDocuments() -> URL {
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
-        return dir
-    }
-
     private func makeMedia() -> MediaStore { MediaStore(paths: StoragePaths(documents: tempDocuments())) }
 
     func testPathLayout() {
