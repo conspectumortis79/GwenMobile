@@ -55,8 +55,10 @@ enum QwenAPI {
 
     static func askText(_ req: URLRequest) async throws -> String? {
         let data = try await HTTP.jsonData(req)
-        guard let obj = try? JSONDecoder().decode(ChatResponse.self, from: data) else { return nil }
-        return obj.answerText
+        return try await Offload.run {
+            guard let obj = try? JSONDecoder().decode(ChatResponse.self, from: data) else { return nil }
+            return obj.answerText
+        }
     }
 
     static func resolveQuery(baseURL: String, key: String, model: String,
@@ -97,11 +99,9 @@ enum QwenAPI {
         let req = try fetchModelsRequest(baseURL: baseURL, key: key)
         let (data, resp) = try await HTTP.data(req)
         try HTTP.ensureAPISuccess(resp, data: data)
-        struct ModelsResp: Decodable {
-            struct M: Decodable { var id: String }
-            var data: [M]
+        return try await Offload.run {
+            try JSONDecoder().decode(ModelsPayload.self, from: data).data.map(\.id).sorted()
         }
-        return try JSONDecoder().decode(ModelsResp.self, from: data).data.map(\.id).sorted()
     }
 
     static func makeImageRequest(baseURL: String, key: String, model: String,
@@ -131,20 +131,23 @@ enum QwenAPI {
     static func generateImage(req: URLRequest) async throws -> [URL] {
         let (data, resp) = try await HTTP.data(req)
         try HTTP.ensureAPISuccess(resp, data: data)
-        guard let obj = try? JSONDecoder().decode(ChatResponse.self, from: data),
-              let content = obj.answerParts else {
-            throw APIError(message: L.t("no_image"))
-        }
-        var urls: [URL] = []
-        var note: String?
-        for part in content {
-            if let s = part.image, let u = URL(string: s) { urls.append(u) }
-            if urls.isEmpty, let t = part.text, !t.trimmingCharacters(in: .whitespaces).isEmpty {
-                note = t
+        let parsed = try await Offload.run { () -> (urls: [URL], note: String?) in
+            guard let obj = try? JSONDecoder().decode(ChatResponse.self, from: data),
+                  let content = obj.answerParts else {
+                throw APIError(message: L.t("no_image"))
             }
+            var urls: [URL] = []
+            var note: String?
+            for part in content {
+                if let s = part.image, let u = URL(string: s) { urls.append(u) }
+                if urls.isEmpty, let t = part.text, !t.trimmingCharacters(in: .whitespaces).isEmpty {
+                    note = t
+                }
+            }
+            return (urls, note)
         }
-        if urls.isEmpty { throw APIError(message: note ?? L.t("no_image")) }
-        return urls
+        guard !parsed.urls.isEmpty else { throw APIError(message: parsed.note ?? L.t("no_image")) }
+        return parsed.urls
     }
 
     static func download(_ url: URL) async throws -> Data {
@@ -269,7 +272,7 @@ enum QwenAPI {
 
     static func streamText(req: URLRequest) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
-            let task = Task {
+            let task = Task.detached(priority: .userInitiated) {
                 do {
                     let (bytes, response) = try await HTTP.session.bytes(for: req)
                     if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
@@ -310,4 +313,9 @@ enum QwenAPI {
             continuation.onTermination = { _ in task.cancel() }
         }
     }
+}
+
+private struct ModelsPayload: Decodable {
+    struct ModelEntry: Decodable { var id: String }
+    var data: [ModelEntry]
 }

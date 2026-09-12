@@ -98,9 +98,11 @@ final class VoiceTranscriber: NSObject, ObservableObject, AVAudioRecorderDelegat
         Task {
             defer { state = .idle }
             do {
-                let wav = try Data(contentsOf: url)
-                try? FileManager.default.removeItem(at: url)
-                let pcm = WAVCodec.pcm(fromWAV: wav)
+                let pcm = try await Offload.run {
+                    let wav = try Data(contentsOf: url)
+                    try? FileManager.default.removeItem(at: url)
+                    return WAVCodec.pcm(fromWAV: wav)
+                }
                 guard pcm.count > Self.minPCMLength else {
                     lastError = L.FriendlyError(message: L.t("asr_empty"), detail: "", openSettings: false)
                     return
@@ -131,12 +133,19 @@ final class VoiceTranscriber: NSObject, ObservableObject, AVAudioRecorderDelegat
             ],
             "turn_detection": NSNull(),
         ])
-        var idx = pcm.startIndex
-        while idx < pcm.endIndex {
-            let end = min(idx + sendChunkSize, pcm.endIndex)
-            try await client.send(["type": "input_audio_buffer.append",
-                                   "audio": pcm.subdata(in: idx..<end).base64EncodedString()])
-            idx = end
+        let chunkSize = Self.sendChunkSize
+        let chunks: [String] = try await Offload.run {
+            var encoded: [String] = []
+            var idx = pcm.startIndex
+            while idx < pcm.endIndex {
+                let end = min(idx + chunkSize, pcm.endIndex)
+                encoded.append(pcm.subdata(in: idx..<end).base64EncodedString())
+                idx = end
+            }
+            return encoded
+        }
+        for chunk in chunks {
+            try await client.send(["type": "input_audio_buffer.append", "audio": chunk])
         }
         try await client.send(["type": "input_audio_buffer.commit"])
         try await client.send(["type": "response.create"])

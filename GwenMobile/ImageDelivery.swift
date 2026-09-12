@@ -18,9 +18,12 @@ struct ImageDelivery {
 
     func store(_ urls: [URL]) async throws -> [Attachment] {
         var attachments: [Attachment] = []
+        let media = self.media
         for url in urls {
             let data = try await QwenAPI.download(url)
-            if let name = media.storeImageData(data) { attachments.append(Attachment(file: name)) }
+            if let name = try await Offload.run({ media.storeImageData(data) }) {
+                attachments.append(Attachment(file: name))
+            }
         }
         return attachments
     }

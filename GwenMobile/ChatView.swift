@@ -367,11 +367,16 @@ struct ChatView: View {
     }
 
     func attachForEditing(_ att: Attachment) {
-        let t0 = ContinuousClock.now
-        guard let img = store.media.decodedDisplayImage(named: att.file) else { return }
-        flowMark("ATTACH_EDIT decode ms=\(msOf(t0.duration(to: .now))) size=\(Int(img.size.width))x\(Int(img.size.height))")
-        pendingImages = [(image: img, file: att.file)]
-        inputFocused = true
+        let media = store.media
+        let file = att.file
+        Task {
+            let t0 = ContinuousClock.now
+            let decoded = try? await Offload.run { media.decodedDisplayImage(named: file) }
+            guard let img = decoded else { return }
+            flowMark("ATTACH_EDIT decode ms=\(msOf(t0.duration(to: .now))) size=\(Int(img.size.width))x\(Int(img.size.height))")
+            pendingImages = [(image: img, file: file)]
+            inputFocused = true
+        }
     }
 
     func lastImageCandidate() -> Attachment? {
@@ -891,9 +896,13 @@ struct ChatView: View {
                                    convID: convID, started: started)
                 return
             }
-            let req = try WebSearch.makeAnswerRequest(baseURL: settings.baseURL, key: settings.apiKey,
-                                                      model: chatModel, question: question, hits: hits,
-                                                      history: history)
+            let researchBaseURL = settings.baseURL
+            let researchKey = settings.apiKey
+            let req = try await Offload.run {
+                try WebSearch.makeAnswerRequest(baseURL: researchBaseURL, key: researchKey,
+                                                model: chatModel, question: question, hits: hits,
+                                                history: history)
+            }
             isStreaming = true
             streamText = ""
             let throttle = StreamThrottle { chunk in streamText += chunk }

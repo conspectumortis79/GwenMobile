@@ -83,10 +83,13 @@ enum PictureDirector {
     static func observe(baseURL: String, key: String, model: String, instruction: String,
                         pictures: [Data], shown: [Int] = [], total: Int = 0, fresh: [Int] = [],
                         thinking: ThinkingDirective = .nothing) async -> PictureDirection? {
-        guard let request = try? request(baseURL: baseURL, key: key, model: model,
-                                         instruction: instruction, pictures: pictures, shown: shown,
-                                         total: total, fresh: fresh, thinking: thinking),
-              let raw = try? await askText(request) else { return nil }
+        let raw = try? await Offload.run {
+            let probe = try PictureDirector.request(baseURL: baseURL, key: key, model: model,
+                                                    instruction: instruction, pictures: pictures, shown: shown,
+                                                    total: total, fresh: fresh, thinking: thinking)
+            return try await QwenAPI.askText(probe)
+        }
+        guard let raw else { return nil }
         guard let direction = direction(from: raw, pictures: pictures.count) else {
             flowMark("BILDZIEL unverwertet bilder=\(pictures.count) \"\(instruction)\" antwort="
                      + raw.replacingOccurrences(of: "\n", with: " ").prefix(120))
@@ -94,9 +97,5 @@ enum PictureDirector {
         }
         flowMark("BILDZIEL \(direction.trace)")
         return direction
-    }
-
-    private static func askText(_ request: URLRequest) async throws -> String? {
-        try await QwenAPI.askText(request)
     }
 }

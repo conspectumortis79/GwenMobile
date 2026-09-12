@@ -7,11 +7,11 @@ struct WebResearch {
     var onStatus: (String) -> Void
 
     func hits(for query: String) async throws -> [WebHit] {
-        let urls = try await WebSearch.search(query)
+        let urls = try await Offload.run { try await WebSearch.search(query) }
         var found: [WebHit] = []
         for (index, url) in urls.enumerated() {
             onStatus("\(L.t("web_fetching")) (\(index + 1)/\(urls.count)) \(WebSearch.domain(of: url))")
-            if let hit = try? await WebSearch.fetchText(url) { found.append(hit) }
+            if let hit = try? await Offload.run({ try await WebSearch.fetchText(url) }) { found.append(hit) }
         }
         guard found.count >= Self.minimumSourceCount else { throw APIError(message: L.t("web_no_results")) }
         return found
