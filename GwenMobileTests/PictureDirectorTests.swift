@@ -56,7 +56,7 @@ final class PictureDirectorTests: XCTestCase {
     }
 
     func testInstructionsTellTheDirectorWhichChatPlacesAreShown() {
-        let instructions = PictureDirector.instructions(pictures: 3, shown: [1, 3, 4], total: 5)
+        let instructions = Prompt.Pictures.director(pictures: 3, shown: [1, 3, 4], total: 5)
         XCTAssertTrue(instructions.contains("are 1, 3, 4 of 5 pictures"))
         XCTAssertTrue(instructions.contains("the chat's very first picture is BILD 1"))
         XCTAssertTrue(instructions.contains("answer {\"edit\":null}"))

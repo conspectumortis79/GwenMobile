@@ -73,7 +73,7 @@ final class ImagePromptComposerTests: XCTestCase {
     }
 
     func testInstructionsDemandASelfContainedPictureDescription() {
-        let instructions = ImagePromptComposer.instructions()
+        let instructions = Prompt.Research.imagePrompt(pictures: 1)
         XCTAssertTrue(instructions.contains("ONLY the prompt text"))
         XCTAssertTrue(instructions.contains("never sees the conversation"))
         XCTAssertTrue(instructions.contains("davon"))
@@ -81,8 +81,8 @@ final class ImagePromptComposerTests: XCTestCase {
     }
 
     func testInstructionsNameTheTargetPictureByItsNumberWhenSeveralPicturesComeAlong() {
-        let single = ImagePromptComposer.instructions()
-        let several = ImagePromptComposer.instructions(pictures: 3)
+        let single = Prompt.Research.imagePrompt(pictures: 1)
+        let several = Prompt.Research.imagePrompt(pictures: 3)
         XCTAssertFalse(single.contains("numbered from 1 (the oldest)"))
         XCTAssertTrue(several.contains("numbered from 1 (the oldest) to 3 (the newest)"))
         XCTAssertTrue(several.contains("Name the picture that must be edited by that number"))

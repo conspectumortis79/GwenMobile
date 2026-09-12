@@ -67,7 +67,7 @@ enum QwenAPI {
         }
         let req = try makeRequest(baseURL: baseURL, key: key, model: model,
                                   messages: FollowUpResolver.requestMessages(text: last, history: history),
-                                  imageData: [], stream: false, system: FollowUpResolver.instructions(),
+                                  imageData: [], stream: false, system: Prompt.Research.followUpQuery(),
                                   thinking: thinking)
         return try await askText(req)
     }
@@ -80,7 +80,7 @@ enum QwenAPI {
         let req = try makeRequest(baseURL: baseURL, key: key, model: model,
                                   messages: ImagePromptComposer.requestMessages(text: instruction, history: history),
                                   imageData: [], stream: false,
-                                  system: ImagePromptComposer.instructions(pictures: pictures),
+                                  system: Prompt.Research.imagePrompt(pictures: pictures),
                                   thinking: thinking)
         guard let raw = try await askText(req) else { return nil }
         return ImagePromptComposer.usablePrompt(raw, insteadOf: instruction)
@@ -155,22 +155,7 @@ enum QwenAPI {
     static func detectImageIntent(baseURL: String, key: String, model: String,
                                   instruction: String,
                                   thinking: ThinkingDirective = .nothing) async -> ImageRoute? {
-        let sys = """
-        You are a router for an image tool. The user always attaches one or more existing images \
-        plus a text instruction. Reply with exactly one word.
-        EDIT — the instruction asks to modify an existing picture of the chat: recoloring or repainting \
-        an object, removing/adding/replacing something in the scene, changing the background, the size or \
-        the proportions of an object, style transfer, retouching, extending, fixing, annotating the same \
-        picture, or copying a colour, style or size from one of the shown pictures onto another one. \
-        Examples: "make the mouse blue", "remove the watermark", "turn it into a cartoon", \
-        "färbe die Maus blau", "hintergrund schwarz", "mache den gegenstand so groß wie auf dem anderen foto".
-        CREATE — the instruction wants a brand-new picture whose subject is described purely in words, \
-        not one of the pictures already shown, possibly only inspired by them. \
-        Examples: "generate a wallpaper of a futuristic city", "draw a dragon like this one".
-        CHAT — the instruction is a question or conversation about the image, or anything that \
-        does not ask for a picture output. Examples: "what species is this?", "wer ist das?", \
-        "schön, oder?".
-        """
+        let sys = Prompt.Router.imageIntent()
         let msg = ChatMessage(role: .user, text: instruction)
         guard let req = try? makeRequest(baseURL: baseURL, key: key, model: model,
                                          messages: [msg], imageData: [],
@@ -204,57 +189,9 @@ enum QwenAPI {
         let offset = TimeZone.current.secondsFromGMT()
         let oh = offset / 3600, om = abs(offset % 3600 / 60)
         let tz = String(format: "UTC%@%02d:%02d", offset < 0 ? "-" : "+", abs(oh), om)
-        let hist = ConversationTranscript.from(messages: history)
-        var ctx = ""
-        if !events.isEmpty {
-            ctx += "\nExisting upcoming events (title \u{2014} start \u{2014} current notifications \u{2014} calendar):\n\(events)\n"
-        }
-        if !calendars.isEmpty {
-            ctx += calendars
-        }
-        if !hist.isEmpty {
-            ctx += "\nRecent conversation (use it to resolve what the user refers to):\n\(hist)\n"
-        }
-        let sys = """
-        You are the calendar router of a chat app. Decide whether the user message asks to \
-        create, change or delete a calendar appointment or reminder.
-        Current local date & time: \(Formatters.planNow(Date())) (\(tz)). Times you output are local, 24h.\(ctx)
-        Reply with ONLY one JSON object, no markdown fences:
-        {"action":"create|update|delete|none","title":"...","start":"YYYY-MM-DD HH:MM",\
-        "end":"YYYY-MM-DD HH:MM","location":"...","notes":"...","alerts":[60],\
-        "calendar":"...","find":"words identifying the existing event"}
-        Rules:
-        - create: only for events NOT in the existing list above. "title" and "start" required; \
-        if only a vague time is given use the next full hour; default "end" = start + 30 minutes; \
-        omit fields the user did not mention.
-        - "alerts": minutes before the start when the phone should REALLY notify the user \
-        ("Hinweis 1 Stunde vorher" -> 60, "2ter Hinweis 2 Stunden vorher" -> also 120, "30 Min vorher" -> 30). \
-        Include only when the user explicitly asks for a notification/reminder before the event; \
-        NEVER put such timing into "notes" instead.
-        - Adding, changing or removing a notification/Hinweis/Erinnerung for an event that already \
-        exists (e.g. "Erinnere mich an X eine Stunde vorher", "füge noch einen zweiten Hinweis hinzu") \
-        is ALWAYS action=update with "find" = that event's title and "alerts" = the FULL final list \
-        (merge with the event's current notifications when adding; [] removes all). \
-        NEVER create a duplicate event just to attach a reminder to it.
-        - update: set "find" plus every changed field (new "start"/"end"/"title"/"location"). \
-        Omit "alerts" to keep existing notifications.
-        - "calendar": the exact title of the calendar the appointment belongs to. Set it whenever the user \
-        names a calendar or describes one ("privat", "private", "persoenlich", "Arbeit", "work", "beruflich", \
-        "Firma", "in meinem privaten Kalender"). Map the description onto one of the available calendar titles \
-        when a list is given above, otherwise answer "privat" or "arbeit". On action=update this MOVES the \
-        existing appointment to that calendar. Omit "calendar" when the user says nothing about it - the app \
-        then files new appointments under the work calendar and keeps an existing appointment where it is.
-        - A calendar wish NEVER belongs in "notes", "title" or "location": "privat", "nicht arbeit", \
-        "private", "work", "privat statt arbeit" always goes into "calendar" only. Put text into "notes" \
-        only when the user wants exactly that text stored inside the appointment.
-        - A short follow-up that only names a calendar ("bitte privat statt arbeit", "mach das privat") is \
-        action=update with "find" = the appointment from the recent conversation above and "calendar" set.
-        - delete: set "find".
-        - "none" for everything else, including questions about the calendar or standalone to-dos \
-        that do not refer to an existing appointment.
-        Resolve relative dates ("morgen", "uebermorgen", "naechsten Freitag", "in 2 Wochen", \
-        "next Monday") against the current local date.
-        """
+        let sys = Prompt.Router.calendar(tz: tz, now: Formatters.planNow(Date()),
+                                         events: events, calendars: calendars,
+                                         history: ConversationTranscript.from(messages: history))
         let msg = ChatMessage(role: .user, text: instruction)
         let req = try makeRequest(baseURL: baseURL, key: key, model: model,
                                   messages: [msg], imageData: [], stream: false, system: sys,

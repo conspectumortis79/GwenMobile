@@ -54,22 +54,4 @@ enum FollowUpResolver {
         return text.lowercased() != original.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
-    static func instructions() -> String {
-        """
-        You turn a follow-up question into ONE standalone search query.
-        Reply with only that query on a single line — no answer, no quotes, no explanation, no trailing period, \
-        at most 140 characters, in the language of the user.
-        Take the topic from the KONTEXT block and combine it with what the NEUE FRAGE adds (place, time range, \
-        subset, comparison). Keep the user's own wording wherever it fits.
-        A KONTEXT line can end with [\(ConversationTranscript.Picture.attached.rawValue)] or \
-        [\(ConversationTranscript.Picture.generated.rawValue)]; that picture is still on screen and the app \
-        passes it along, so name the picture in the query instead of dropping it.
-        Examples:
-        KONTEXT about causes of climate warming + NEUE FRAGE "und in Deutschland?" \
-        -> Hauptursachen der Klimaerwärmung in Deutschland
-        KONTEXT about population figures + NEUE FRAGE "mach daraus ein diagramm" \
-        -> Einwohnerzahl Deutschland als Diagramm
-        If the NEUE FRAGE is already self-contained, repeat it unchanged.
-        """
-    }
 }

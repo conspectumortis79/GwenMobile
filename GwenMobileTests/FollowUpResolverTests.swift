@@ -77,7 +77,7 @@ final class FollowUpResolverTests: XCTestCase {
     }
 
     func testInstructionsDemandASingleStandaloneQuery() {
-        let instructions = FollowUpResolver.instructions()
+        let instructions = Prompt.Research.followUpQuery()
         XCTAssertTrue(instructions.contains("standalone search query"))
         XCTAssertTrue(instructions.contains("only that query on a single line"))
         XCTAssertTrue(instructions.contains("already self-contained, repeat it unchanged"))
