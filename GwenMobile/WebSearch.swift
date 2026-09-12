@@ -6,6 +6,10 @@ struct WebHit {
     var url: String
     var domain: String
     var text: String
+
+    func sourceBlock(numbered number: Int) -> String {
+        "## Quelle [\(number)] \(title) — \(domain)\n\(text)\n\n"
+    }
 }
 
 @MainActor
@@ -24,7 +28,8 @@ enum WebSearch {
     ]
 
     static func domain(of url: URL) -> String {
-        (url.host ?? "").replacingOccurrences(of: "www.", with: "")
+        let host = url.host ?? ""
+        return host.hasPrefix("www.") ? String(host.dropFirst("www.".count)) : host
     }
 
     static func search(_ query: String) async throws -> [URL] {
@@ -93,8 +98,8 @@ enum WebSearch {
         if !transcript.isEmpty {
             context += "## Bisheriger Verlauf der Unterhaltung (nur zur Einordnung der Frage, nicht als Quelle)\n\(transcript)\n\n"
         }
-        for (i, h) in hits.enumerated() {
-            context += "## Quelle [\(i + 1)] \(h.title) — \(h.domain)\n\(h.text)\n\n"
+        for (index, hit) in hits.enumerated() {
+            context += hit.sourceBlock(numbered: index + 1)
         }
         let body: [String: Any] = [
             "model": model,

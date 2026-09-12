@@ -157,17 +157,13 @@ struct SettingsView: View {
         }
     }
 
-    private var usageDetail: String {
-        "\(cleaner.usage.imageFiles) · \(cleaner.usage.imageBytesText)"
-    }
+    private var usageDetail: String { cleaner.usage.summaryText }
 
     private var historyDetail: String {
         "\(cleaner.usage.conversations) \(L.t("conversations_word")) · \(cleaner.usage.messages) \(L.t("messages_word"))"
     }
 
-    private var deleteAllImagesText: String {
-        "\(cleaner.usage.imageFiles) \(L.t("images_word")) (\(cleaner.usage.imageBytesText))"
-    }
+    private var deleteAllImagesText: String { cleaner.usage.imagesLine }
 
     private func modelPicker(_ title: String, selection: Binding<String>,
                              options: [String]) -> some View {

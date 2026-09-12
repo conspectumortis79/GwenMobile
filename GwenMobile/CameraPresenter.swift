@@ -37,7 +37,8 @@ final class CameraPresenter: NSObject, ObservableObject,
                 flowMark("CAMERA shot px=\(Int(src.size.width * src.scale))x\(Int(src.size.height * src.scale))")
                 Task { @MainActor [weak self] in
                     let small = await Task.detached(priority: .userInitiated) {
-                        src.preparingThumbnail(of: CGSize(width: 1568, height: 1568)) ?? src
+                        src.preparingThumbnail(of: CGSize(width: ImagePolicy.uploadMaxPixel,
+                                                          height: ImagePolicy.uploadMaxPixel)) ?? src
                     }.value
                     flowMark("CAMERA thumbnail ms=\(msOf(t0.duration(to: .now)))")
                     self?.onImage?(small)

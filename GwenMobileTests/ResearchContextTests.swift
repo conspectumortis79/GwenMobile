@@ -36,6 +36,21 @@ final class ResearchContextTests: XCTestCase {
         XCTAssertEqual(WebResearch.dataDigest(from: hits, limit: 40).count, 40)
     }
 
+    func testAnswerPromptAndDigestShareOneSourceBlockFormat() throws {
+        let hits = [Fixtures.hit("Statista", "https://statista.test/a", "statista.test", "83,2 Millionen")]
+        let request = try WebSearch.makeAnswerRequest(baseURL: "https://api.test/v1", key: "k", model: "m",
+                                                      question: "frage", hits: hits)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
+        let messages = try XCTUnwrap(body["messages"] as? [[String: Any]])
+        let user = try XCTUnwrap(messages.last?["content"] as? String)
+        XCTAssertTrue(user.contains(WebResearch.dataDigest(from: hits)))
+    }
+
+    func testDomainOnlyLosesALeadingWwwPrefix() {
+        XCTAssertEqual(WebSearch.domain(of: URL(string: "https://www.statista.com/x")!), "statista.com")
+        XCTAssertEqual(WebSearch.domain(of: URL(string: "https://shopwww.example.com/x")!), "shopwww.example.com")
+    }
+
     func testPriorResearchFeedsThePreviousAnswerAndItsSources() {
         let answer = ChatMessage(role: .assistant, text: "2020: 83,2 Mio.\n2024: 84,7 Mio.",
                                  sources: [Fixtures.source("Statista", "https://statista.test/e", "statista.test")])

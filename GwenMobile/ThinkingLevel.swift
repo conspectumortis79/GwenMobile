@@ -12,12 +12,7 @@ enum ThinkingLevel: String, CaseIterable, Codable, Sendable {
 
     static let coreCases: [ThinkingLevel] = [.low, .medium, .high, .xhigh]
 
-    var isCore: Bool {
-        switch self {
-        case .low, .medium, .high, .xhigh: return true
-        case .modelDefault, .off, .minimal, .max: return false
-        }
-    }
+    var isCore: Bool { ThinkingLevel.coreCases.contains(self) }
 
     var labelKey: String {
         switch self {

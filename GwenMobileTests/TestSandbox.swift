@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import GwenMobile
 
 extension XCTestCase {
@@ -28,6 +29,22 @@ extension XCTestCase {
     @MainActor
     func settle(_ milliseconds: Int = 200) async throws {
         try await Task.sleep(for: .milliseconds(milliseconds))
+    }
+
+    func jsonBody(of request: URLRequest) -> [String: Any]? {
+        guard let data = request.httpBody else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+}
+
+enum FakePicture {
+    static func make(_ size: CGSize = CGSize(width: 40, height: 20)) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: size, format: format).image { context in
+            UIColor.systemTeal.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
     }
 }
 

@@ -109,7 +109,7 @@ struct Bubble: View, Equatable {
                                 .contextMenu { imageActions(att, library: true) }
                             }
                             HStack(spacing: 14) {
-                                ForEach(Array(outImages.enumerated()), id: \.offset) { _, att in
+                                ForEach(outImages, id: \.file) { att in
                                     Button { saveAttachment(att) } label: {
                                         Label(L.t("save_to_photos"), systemImage: "square.and.arrow.down")
                                             .font(.system(size: 13))
@@ -325,10 +325,10 @@ struct Bubble: View, Equatable {
 
     private func saveAttachment(_ att: Attachment) {
         guard let media else { return }
-        if let img = media.cachedImage(for: att) { saveToPhotos(img); return }
+        let file = att.file
         Task { @MainActor in
             let img = await Task.detached(priority: .userInitiated) {
-                media.loadUIImage(att, maxPixel: ImagePolicy.photoExportMaxPixel)
+                media.exportImage(named: file)
             }.value
             if let img { saveToPhotos(img) }
         }

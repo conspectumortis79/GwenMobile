@@ -7,18 +7,15 @@ struct MessagePart: Decodable {
 
 struct ChatResponse: Decodable {
     struct Message: Decodable {
-        var role: String?
         var text: String?
         var parts: [MessagePart]?
 
         private enum CodingKeys: String, CodingKey {
-            case role
             case content
         }
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            role = try container.decodeIfPresent(String.self, forKey: .role)
             if let plain = try? container.decode(String.self, forKey: .content) {
                 text = plain
                 parts = nil

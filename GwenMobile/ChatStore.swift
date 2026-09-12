@@ -112,11 +112,20 @@ final class ChatStore: ObservableObject {
 
     private var saveTask: Task<Void, Never>?
 
+    static let saveDebounce: Duration = .milliseconds(250)
+
+    func flushPendingSave() {
+        saveTask?.cancel()
+        saveTask = nil
+        saveNow()
+    }
+
     private func save() {
         saveTask?.cancel()
         saveTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(250))
+            try? await Task.sleep(for: Self.saveDebounce)
             guard !Task.isCancelled, let self else { return }
+            self.saveTask = nil
             self.saveNow()
         }
     }

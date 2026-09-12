@@ -5,6 +5,7 @@ import UIKit
 @MainActor
 struct ChatView: View {
     @EnvironmentObject var store: ChatStore
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var settings = AppSettings.shared
     var listenToken: Binding<Int>? = nil
     var testToken: Binding<Int>? = nil
@@ -127,6 +128,9 @@ struct ChatView: View {
         .onChange(of: testToken?.wrappedValue ?? 0) { _, _ in
             startFlowTest()
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { store.flushPendingSave() }
+        }
     }
 
     func attachScrollProxy(_ proxy: ScrollViewProxy) {
@@ -160,11 +164,15 @@ struct ChatView: View {
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(400))
             guard settings.isConfigured, voice.state == .idle else { return }
-            inputFocused = false
-            voice.start(baseURL: settings.baseURL, key: settings.apiKey,
-                        model: settings.audioModel) { text in
-                self.voiceDidTranscribe(text)
-            }
+            startRecording()
+        }
+    }
+
+    @MainActor private func startRecording() {
+        inputFocused = false
+        voice.start(baseURL: settings.baseURL, key: settings.apiKey,
+                    model: settings.audioModel) { text in
+            self.voiceDidTranscribe(text)
         }
     }
 
@@ -244,7 +252,7 @@ struct ChatView: View {
                         }
                     }
                     if isStreaming {
-                        Bubble(text: streamText, isUser: false, question: liveQuestion, streaming: true)
+                        Bubble(text: ChatMarkers.strip(streamText), isUser: false, question: liveQuestion, streaming: true)
                             .id("streaming")
                     }
                     if voice.state == .processing {
@@ -343,12 +351,7 @@ struct ChatView: View {
     }
 
     private func dayLabel(_ date: Date) -> some View {
-        let cal = Calendar.current
-        let day: String
-        if cal.isDateInToday(date) { day = L.t("today") }
-        else if cal.isDateInYesterday(date) { day = L.t("yesterday") }
-        else { day = Formatters.day(date) }
-        return Text(verbatim: "\(day) · \(Self.timeString( date))")
+        Text(verbatim: "\(Formatters.relationalDay(date)) · \(Self.timeString(date))")
             .font(.system(size: 11))
             .foregroundStyle(Color(.tertiaryLabel))
             .frame(maxWidth: .infinity, alignment: .center)
@@ -361,7 +364,7 @@ struct ChatView: View {
 
     func attachForEditing(_ att: Attachment) {
         let t0 = ContinuousClock.now
-        guard let img = store.media.uiImage(for: att) else { return }
+        guard let img = store.media.decodedDisplayImage(named: att.file) else { return }
         flowMark("ATTACH_EDIT decode ms=\(msOf(t0.duration(to: .now))) size=\(Int(img.size.width))x\(Int(img.size.height))")
         pendingImages = [(image: img, file: att.file)]
         inputFocused = true
@@ -536,11 +539,7 @@ struct ChatView: View {
         guard settings.isConfigured else { showSettings = true; return }
         switch voice.state {
         case .idle:
-            inputFocused = false
-            voice.start(baseURL: settings.baseURL, key: settings.apiKey,
-                        model: settings.audioModel) { text in
-                self.voiceDidTranscribe(text)
-            }
+            startRecording()
         case .recording:
             voice.stopAndTranscribe(baseURL: settings.baseURL, key: settings.apiKey,
                                     model: settings.audioModel) { text in
@@ -672,7 +671,7 @@ struct ChatView: View {
                                   elapsed: Date().timeIntervalSince(started),
                                   to: convID, outImages: outAtts)
         } catch {
-            store.appendAssistant(AnswerError.model(error.localizedDescription, model: imageModel, generic: L.t("err_generic")),
+            store.appendAssistant(AnswerError.model(error, model: imageModel, generic: L.t("err_generic")),
                                   model: imageModel,
                                   elapsed: Date().timeIntervalSince(started), to: convID)
         }
@@ -700,7 +699,8 @@ struct ChatView: View {
                 await streamChat(turn: turn, history: history, convID: convID, started: started)
             }
         } catch {
-            store.appendAssistant(AnswerError.other(error.localizedDescription, generic: L.t("err_cal_generic")), model: chatModel,
+            store.appendAssistant(AnswerError.other(error, model: chatModel,
+                                                    generic: L.t("err_cal_generic")), model: chatModel,
                                   elapsed: Date().timeIntervalSince(started), to: convID)
         }
     }
@@ -742,7 +742,7 @@ struct ChatView: View {
 
     @MainActor private func appendWebFailure(_ error: Error, model: String?,
                                              convID: UUID, started: Date) {
-        store.appendAssistant(AnswerError.other(error.localizedDescription, generic: L.t("err_web_generic")),
+        store.appendAssistant(AnswerError.other(error, model: model, generic: L.t("err_web_generic")),
                               model: model, elapsed: Date().timeIntervalSince(started), to: convID)
     }
 
@@ -777,7 +777,7 @@ struct ChatView: View {
             flowMark("CHART done images=\(attachments.count)")
             maybeSpeak(answer)
         } catch {
-            store.appendAssistant(AnswerError.model(error.localizedDescription, model: imageModel,
+            store.appendAssistant(AnswerError.model(error, model: imageModel,
                                                     generic: L.t("err_generic")), model: imageModel,
                                   elapsed: Date().timeIntervalSince(started), to: convID)
         }
@@ -814,8 +814,8 @@ struct ChatView: View {
                 isStreaming = false
                 let question = await standaloneQuestion(history)
                 if markers.search {
-                    try await runWebSearch(question: question, images: images, convID: convID,
-                                           started: started, chart: markers.chart, history: history)
+                    await runWebSearch(question: question, images: images, convID: convID,
+                                       started: started, chart: markers.chart, history: history)
                 } else {
                     await runChartFlow(question: question, hits: [], images: images, history: history,
                                        convID: convID, started: started)
@@ -847,7 +847,7 @@ struct ChatView: View {
     }
 
     @MainActor func runWebSearch(question: String, images: [Data], convID: UUID, started: Date,
-                                 chart: Bool, history: [ChatMessage]) async throws {
+                                 chart: Bool, history: [ChatMessage]) async {
         let chatModel = settings.chatModel
         do {
             let hits = try await gatherWebHits(question)
@@ -864,7 +864,6 @@ struct ChatView: View {
             let throttle = StreamThrottle { chunk in streamText += chunk }
             defer { isStreaming = false; streamText = ""; throttle.cancel() }
             let answer = try await ChatRunner.shared.run(req) { chunk in throttle.receive(chunk) }
-            throttle.cancel()
             guard !answer.isEmpty else { throw APIError(message: L.t("web_no_answer")) }
             let sources = WebResearch.sources(from: hits)
             store.appendAssistant(answer, model: chatModel,

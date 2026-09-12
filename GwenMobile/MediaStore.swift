@@ -35,17 +35,17 @@ final class MediaStore: @unchecked Sendable {
         catch { return nil }
     }
 
+    func data(named file: String) -> Data? {
+        fileManager.contents(atPath: paths.image(file).path)
+    }
+
     func data(for attachment: Attachment) -> Data? {
-        fileManager.contents(atPath: paths.image(attachment.file).path)
+        data(named: attachment.file)
     }
 
     func storedURL(for attachment: Attachment) -> URL? {
         let url = paths.imageURL(for: attachment)
         return fileManager.fileExists(atPath: url.path) ? url : nil
-    }
-
-    func data(named file: String) -> Data? {
-        fileManager.contents(atPath: paths.image(file).path)
     }
 
     func removeImage(named file: String) {
@@ -90,33 +90,30 @@ final class MediaStore: @unchecked Sendable {
         for name in names { try? fileManager.removeItem(at: paths.trashItem(name)) }
     }
 
-    func cachedImage(for attachment: Attachment) -> UIImage? {
-        Self.imageCache.object(forKey: attachment.file as NSString)
-    }
-
     func cachedDisplayImage(named file: String) -> UIImage? {
         Self.imageCache.object(forKey: file as NSString)
     }
 
-    func cachedDisplayRatio(named file: String) -> CGFloat? {
-        Self.ratios.value(for: file)
-    }
-
-    func loadUIImage(_ attachment: Attachment, maxPixel: CGFloat) -> UIImage? {
-        let key = attachment.file as NSString
+    func decodedDisplayImage(named file: String) -> UIImage? {
+        let key = file as NSString
         if let hit = Self.imageCache.object(forKey: key) { return hit }
         #if DEBUG
         RenderStats.imageDecodes.bump()
         #endif
-        guard let data = data(for: attachment),
-              let img = Self.thumbnail(data, maxPixel: maxPixel) else { return nil }
+        guard let data = data(named: file),
+              let img = Self.thumbnail(data, maxPixel: ImagePolicy.displayMaxPixel) else { return nil }
         let cost = Int(img.size.width * img.size.height * img.scale * img.scale * CGFloat(ImagePolicy.cacheCostFactor))
         Self.imageCache.setObject(img, forKey: key, cost: max(cost, 1))
         return img
     }
 
-    func uiImage(for attachment: Attachment) -> UIImage? {
-        loadUIImage(attachment, maxPixel: ImagePolicy.displayMaxPixel)
+    func exportImage(named file: String) -> UIImage? {
+        guard let data = data(named: file) else { return nil }
+        return Self.thumbnail(data, maxPixel: ImagePolicy.photoExportMaxPixel)
+    }
+
+    func cachedDisplayRatio(named file: String) -> CGFloat? {
+        Self.ratios.value(for: file)
     }
 
     func displayRatio(named file: String) -> CGFloat {

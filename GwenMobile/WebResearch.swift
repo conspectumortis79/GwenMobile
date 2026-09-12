@@ -20,7 +20,7 @@ struct WebResearch {
     static func dataDigest(from hits: [WebHit], limit: Int = ChartPlanner.maxDataChars) -> String {
         var digest = ""
         for (index, hit) in hits.enumerated() {
-            digest += "## Quelle [\(index + 1)] \(hit.title) — \(hit.domain)\n\(hit.text)\n\n"
+            digest += hit.sourceBlock(numbered: index + 1)
             if digest.count >= limit { break }
         }
         return String(digest.prefix(limit))

@@ -111,11 +111,8 @@ final class HistoryCleaner: ObservableObject {
         receipt.freedFiles = doomed.count
         receipt.trashedFiles = media.moveImagesToTrash(doomed)
         for file in doomed { feed.forget(file) }
-        usage = StorageUsage(conversations: usage.conversations,
-                             messages: usage.messages,
-                             imageFiles: max(0, usage.imageFiles - receipt.freedFiles),
-                             imageBytes: max(0, usage.imageBytes - receipt.freedBytes))
         self.receipt = receipt
+        Task { await refreshUsage() }
         let window = undoWindow
         undoTask = Task { [weak self] in
             try? await Task.sleep(for: window)

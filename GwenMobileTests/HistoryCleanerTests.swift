@@ -154,4 +154,20 @@ final class HistoryCleanerTests: XCTestCase {
         XCTAssertEqual(usage.bytesByConversation[try XCTUnwrap(store.currentID)], 2)
         XCTAssertTrue(name.hasPrefix("img_"))
     }
+
+    func testDeletionMeasuresTheRemainingHistoryInsteadOfWipingTheNumbers() async throws {
+        let (store, cleaner, media, _) = makeSandbox()
+        try attach(media, to: store)
+        store.newConversation()
+        try attach(media, to: store)
+        await cleaner.refreshUsage()
+        let kept = try XCTUnwrap(store.conversations.first { $0.id != store.currentID }?.id)
+        XCTAssertEqual(cleaner.usage.bytesByConversation[kept], 2)
+        cleaner.deleteConversation(try XCTUnwrap(store.currentID))
+        await waitUntil { cleaner.usage.conversations == 1
+            && cleaner.usage.bytesByConversation[kept] == 2
+            && cleaner.usage.messages == 1 }
+        XCTAssertEqual(cleaner.usage.imageFiles, 1)
+        XCTAssertEqual(cleaner.usage.imageBytes, 2)
+    }
 }

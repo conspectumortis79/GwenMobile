@@ -12,11 +12,6 @@ final class VisionProbeTests: XCTestCase {
         ProbeResponse(status: status, body: body)
     }
 
-    private func body(of req: URLRequest) -> [String: Any]? {
-        guard let data = req.httpBody else { return nil }
-        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-    }
-
     func testOnlyReportedImageTokensProveVision() {
         XCTAssertEqual(VisionProbe.support(response: response(200, supportedBody)), .supported)
         XCTAssertEqual(VisionProbe.imageTokens(in: supportedBody), 66)
@@ -41,10 +36,19 @@ final class VisionProbeTests: XCTestCase {
         XCTAssertNil(VisionProbe.promptTokenDetails(in: noDetailsBody))
     }
 
+    func testStatusesThatNeverLookedAtThePictureStayUnknown() {
+        let refused = Data(#"{"error":{"code":"InvalidParameter","message":"bad"}}"#.utf8)
+        for status in [401, 403, 404, 408, 429] {
+            XCTAssertEqual(VisionProbe.support(response: response(status, refused)), .unknown,
+                           "HTTP \(status) sagt nichts über die Bild-Eingabe")
+        }
+        XCTAssertEqual(VisionProbe.support(response: response(400, refused)), .rejected)
+    }
+
     func testProbeRequestSendsOnePictureAndNoThinkingKeys() throws {
         let req = try VisionProbe.request(baseURL: "https://example.test/compatible-mode/v1",
                                           key: "sk-test", model: "qwen3.8-flash")
-        let body = try XCTUnwrap(self.body(of: req))
+        let body = try XCTUnwrap(self.jsonBody(of: req))
         XCTAssertEqual(body["model"] as? String, "qwen3.8-flash")
         XCTAssertEqual(body["max_tokens"] as? Int, VisionProbe.maxTokens)
         XCTAssertNil(body["reasoning_effort"])

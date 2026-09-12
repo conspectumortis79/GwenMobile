@@ -93,4 +93,17 @@ final class StorageTests: XCTestCase {
         let payload = Data(repeating: 7, count: ImagePolicy.uploadByteBudget - 1)
         XCTAssertEqual(MediaStore.apiData(payload), payload)
     }
+
+    func testExportImageKeepsTheExportSizeAndNeverFillsTheDisplayCache() throws {
+        let media = makeMedia()
+        media.prepareDirectories()
+        let name = try XCTUnwrap(media.store(FakePicture.make(CGSize(width: 2000, height: 1000))))
+        let export = try XCTUnwrap(media.exportImage(named: name))
+        XCTAssertEqual(export.size.width, ImagePolicy.photoExportMaxPixel, accuracy: 1)
+        XCTAssertNil(media.cachedDisplayImage(named: name))
+        let display = try XCTUnwrap(media.decodedDisplayImage(named: name))
+        XCTAssertEqual(display.size.width, ImagePolicy.displayMaxPixel, accuracy: 1)
+        XCTAssertEqual(media.cachedDisplayImage(named: name)?.size.width, display.size.width)
+        XCTAssertNil(media.exportImage(named: "missing.jpg"))
+    }
 }

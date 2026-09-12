@@ -5,7 +5,19 @@ enum AnswerError {
     static let detailPrefix = "\n\nℹ️ "
     static let rawDetailLimit = 120
 
-    static func model(_ raw: String, model: String?, generic: String) -> String {
+    static func model(_ error: Error, model: String?, generic: String) -> String {
+        let api = error as? APIError
+        return AnswerError.model(api?.message ?? error.localizedDescription, model: model,
+                                 generic: generic, status: api?.status)
+    }
+
+    static func other(_ error: Error, model: String? = nil, generic: String) -> String {
+        let api = error as? APIError
+        return AnswerError.other(api?.message ?? error.localizedDescription, model: model,
+                                 generic: generic, status: api?.status)
+    }
+
+    static func model(_ raw: String, model: String?, generic: String, status: Int? = nil) -> String {
         let t = raw.lowercased()
         let detail = String(raw.prefix(rawDetailLimit))
         if IntentHeuristics.safetyRejection.matches(t) {
@@ -20,11 +32,11 @@ enum AnswerError {
         if IntentHeuristics.timeoutInterruption.matches(t) {
             return marker + L.t("err_timeout")
         }
-        return other(raw, model: model, generic: generic)
+        return other(raw, model: model, generic: generic, status: status)
     }
 
-    static func other(_ raw: String, model: String? = nil, generic: String) -> String {
-        let friendly = L.friendlyError(raw, model: model)
+    static func other(_ raw: String, model: String? = nil, generic: String, status: Int? = nil) -> String {
+        let friendly = L.friendlyError(raw, model: model, status: status)
         if friendly.message != raw {
             return marker + friendly.message + (friendly.detail.isEmpty ? "" : detailPrefix + friendly.detail)
         }
