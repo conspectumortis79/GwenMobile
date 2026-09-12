@@ -12,11 +12,7 @@ protocol ImageRenditionReading: Sendable {
     func displayRatio(named file: String) -> CGFloat
 }
 
-extension MediaStore: ImageRenditionReading {
-    func decodedDisplayImage(named file: String) -> UIImage? {
-        loadUIImage(Attachment(file: file), maxPixel: ImagePolicy.displayMaxPixel)
-    }
-}
+extension MediaStore: ImageRenditionReading {}
 
 @MainActor
 final class ImageFeed: ObservableObject {

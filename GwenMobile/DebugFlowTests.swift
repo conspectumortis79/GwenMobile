@@ -16,6 +16,20 @@ enum DebugLaunchTrigger {
 }
 
 extension ChatView {
+    func flowTestPicture(named file: String = flowTestBigImage) async -> UIImage? {
+        guard let stored = store.media.data(named: file) else {
+            flowLog.error("TEST no big image file")
+            return nil
+        }
+        guard let picture = await Task.detached(priority: .userInitiated, operation: {
+            MediaStore.thumbnail(stored, maxPixel: ImagePolicy.uploadMaxPixel)
+        }).value else {
+            flowLog.error("TEST no thumbnail")
+            return nil
+        }
+        return picture
+    }
+
     func runFlowTest(_ name: String) async {
         if name == "sweep" {
             await runSweep()
@@ -101,16 +115,7 @@ extension ChatView {
             guard let conv = store.conversations.first(where: { $0.messages.count > 20 }) else { flowLog.error("TEST no heavy conv"); UIApplication.shared.isIdleTimerDisabled = false; return }
             store.currentID = conv.id
             try? await Task.sleep(for: .milliseconds(2000))
-            guard let bigData = store.media.data(named: flowTestBigImage) else {
-                flowLog.error("TEST no big image file")
-                UIApplication.shared.isIdleTimerDisabled = false
-                return
-            }
-            let decoded = await Task.detached(priority: .userInitiated) {
-                MediaStore.thumbnail(bigData, maxPixel: ImagePolicy.uploadMaxPixel)
-            }.value
-            guard let img = decoded else {
-                flowLog.error("TEST no thumbnail")
+            guard let img = await flowTestPicture() else {
                 UIApplication.shared.isIdleTimerDisabled = false
                 return
             }
@@ -144,16 +149,7 @@ extension ChatView {
             }
             store.currentID = conv.id
             try? await Task.sleep(for: .milliseconds(1500))
-            guard let bigData = store.media.data(named: flowTestBigImage) else {
-                flowLog.error("TEST no big image file")
-                UIApplication.shared.isIdleTimerDisabled = false
-                return
-            }
-            let decoded = await Task.detached(priority: .userInitiated) {
-                MediaStore.thumbnail(bigData, maxPixel: ImagePolicy.uploadMaxPixel)
-            }.value
-            guard let shot = decoded else {
-                flowLog.error("TEST no thumbnail")
+            guard let shot = await flowTestPicture() else {
                 UIApplication.shared.isIdleTimerDisabled = false
                 return
             }
@@ -183,16 +179,7 @@ extension ChatView {
         }
         if name == "camflow" {
             UIApplication.shared.isIdleTimerDisabled = true
-            guard let bigData = store.media.data(named: flowTestBigImage) else {
-                flowLog.error("TEST no big image file")
-                UIApplication.shared.isIdleTimerDisabled = false
-                return
-            }
-            let decoded = await Task.detached(priority: .userInitiated) {
-                MediaStore.thumbnail(bigData, maxPixel: ImagePolicy.uploadMaxPixel)
-            }.value
-            guard let img = decoded else {
-                flowLog.error("TEST no thumbnail")
+            guard let img = await flowTestPicture() else {
                 UIApplication.shared.isIdleTimerDisabled = false
                 return
             }

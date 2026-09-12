@@ -2,17 +2,6 @@ import XCTest
 import UIKit
 @testable import GwenMobile
 
-private enum FakePicture {
-    static func make(_ size: CGSize = CGSize(width: 40, height: 20)) -> UIImage {
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        return UIGraphicsImageRenderer(size: size, format: format).image { context in
-            UIColor.systemTeal.setFill()
-            context.fill(CGRect(origin: .zero, size: size))
-        }
-    }
-}
-
 private final class FakeViewerReader: ViewerImageReading, @unchecked Sendable {
     private let images: [String: UIImage]
     var recorded: [String] = []

@@ -15,6 +15,10 @@ struct StorageUsage: Equatable, Sendable {
         "\(imageFiles) · \(imageBytesText)"
     }
 
+    var imagesLine: String {
+        "\(imageFiles) \(L.t("images_word")) (\(imageBytesText))"
+    }
+
     static func bytesText(_ bytes: Int) -> String {
         ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
     }

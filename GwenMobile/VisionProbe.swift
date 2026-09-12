@@ -13,6 +13,7 @@ enum VisionProbe {
         + "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR42mO4o6FBEmIY1TCqYfhqAAAyBCwQhCQ/2gAAAABJRU5ErkJggg=="
     static let question = "Was ist auf dem Bild?"
     static let maxTokens = 8
+    static let inconclusiveStatuses: Set<Int> = [401, 403, 404, 408, 429]
 
     static func request(baseURL: String, key: String, model: String) throws -> URLRequest {
         guard let url = HTTP.endpoint(baseURL, APIEndpoint.chatCompletions) else {
@@ -42,7 +43,7 @@ enum VisionProbe {
 
     static func support(response: ProbeResponse?) -> VisionSupport {
         guard let response else { return .unknown }
-        if response.status >= 500 { return .unknown }
+        guard response.status < 500, !inconclusiveStatuses.contains(response.status) else { return .unknown }
         if response.rejectedByProvider { return .rejected }
         guard promptTokenDetails(in: response.body) != nil else { return .unknown }
         return (imageTokens(in: response.body) ?? 0) > 0 ? .supported : .rejected

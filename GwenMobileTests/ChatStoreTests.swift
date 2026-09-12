@@ -133,6 +133,17 @@ final class ChatStoreTests: XCTestCase {
         XCTAssertEqual(store.currentID, store.conversations.first?.id)
     }
 
+    func testFlushPendingSaveWritesBeforeTheDebounceElapses() throws {
+        let (store, paths) = makeSandbox()
+        let id = try XCTUnwrap(store.current?.id)
+        store.appendMessage(ChatMessage(role: .user, text: "Frage"), to: id)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: paths.conversations.path))
+        store.flushPendingSave()
+        let data = try XCTUnwrap(FileManager.default.contents(atPath: paths.conversations.path))
+        let reloaded = try JSONDecoder().decode([Conversation].self, from: data)
+        XCTAssertEqual(reloaded.first?.messages.count, 1)
+    }
+
     func testConversationsArePersistedAndReloadedSortedByUpdate() async throws {
         let (store, paths) = makeSandbox()
         let id = try XCTUnwrap(store.current?.id)

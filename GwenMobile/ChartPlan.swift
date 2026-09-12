@@ -144,11 +144,6 @@ private struct LooseNumber: Decodable {
             label = value.isFinite ? ChartPlan.compact(value) : nil
             return
         }
-        if let value = try? container.decode(Int.self) {
-            number = Double(value)
-            label = String(value)
-            return
-        }
         if let flag = try? container.decode(Bool.self) {
             number = flag ? 1 : 0
             label = flag ? "1" : "0"

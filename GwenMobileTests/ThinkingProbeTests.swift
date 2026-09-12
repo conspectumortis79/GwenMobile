@@ -6,11 +6,6 @@ final class ThinkingProbeTests: XCTestCase {
         + "'medium', 'high', 'xhigh', 'max'"
     private let proMessage = "'reasoning_effort' must be one of: 'low', 'medium', 'high', 'xhigh', 'max'"
 
-    private func body(of req: URLRequest) -> [String: Any]? {
-        guard let data = req.httpBody else { return nil }
-        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-    }
-
     private func data(_ text: String) -> Data { Data(text.utf8) }
 
     func testLevelListComesOutOfTheProviderSentence() {
@@ -46,7 +41,7 @@ final class ThinkingProbeTests: XCTestCase {
     func testLevelProbeUsesAnImpossibleValueAndNoThinkingDirective() throws {
         let req = try ThinkingProbe.levelRequest(baseURL: "https://example.test/compatible-mode/v1",
                                                  key: "sk-test", model: "qwen3.8-flash")
-        let body = try XCTUnwrap(self.body(of: req))
+        let body = try XCTUnwrap(self.jsonBody(of: req))
         XCTAssertEqual(body["reasoning_effort"] as? String, ThinkingProbe.invalidLevelValue)
         XCTAssertNil(body["enable_thinking"])
         XCTAssertNil(body["thinking_budget"])
@@ -59,7 +54,7 @@ final class ThinkingProbeTests: XCTestCase {
     func testSwitchOffProbeAsksForThinkingOffOnly() throws {
         let req = try ThinkingProbe.switchOffRequest(baseURL: "https://example.test/compatible-mode/v1",
                                                      key: "sk-test", model: "glm-5.2")
-        let body = try XCTUnwrap(self.body(of: req))
+        let body = try XCTUnwrap(self.jsonBody(of: req))
         XCTAssertEqual(body["enable_thinking"] as? Bool, false)
         XCTAssertNil(body["reasoning_effort"])
     }

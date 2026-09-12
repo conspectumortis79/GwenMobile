@@ -89,8 +89,4 @@ extension ImageZoomScrollView: UIScrollViewDelegate {
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) { centerContents() }
-
-    func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
-        centerContents()
-    }
 }

@@ -59,6 +59,11 @@ final class AnswerHTMLTests: XCTestCase {
         XCTAssertTrue(html.contains("<strong>fett</strong>"))
     }
 
+    func testLinkTargetCannotBreakOutOfTheHrefAttribute() {
+        let html = AnswerHTML.inline("[X](https://a.test/\"/onmouseover/alert)")
+        XCTAssertEqual(html, "<a href=\"https://a.test/&quot;/onmouseover/alert\">X</a>")
+    }
+
     func testCodeSpansKeepTheirOwnMarkdownAndAreEscaped() {
         let html = AnswerHTML.inline("nutze `a < b **c**` bitte")
         XCTAssertTrue(html.contains("<code>a &lt; b **c**</code>"))

@@ -15,8 +15,9 @@ final class IntentHeuristicsTests: XCTestCase {
         XCTAssertTrue(IntentHeuristics.looksLikeImageRequest("generate a logo"))
     }
 
-    func testKnownGapUppercaseBackgroundKeywordNeverMatchesLoweredText() {
-        XCTAssertFalse(IntentHeuristics.looksLikeEditRequest("hintergrund tauschen"))
+    func testGermanBackgroundWordIsDetectedOnLoweredText() {
+        XCTAssertTrue(IntentHeuristics.looksLikeEditRequest("hintergrund tauschen"))
+        XCTAssertTrue(IntentHeuristics.looksLikeEditRequest("ändere den hintergrund"))
         XCTAssertTrue(IntentHeuristics.looksLikeEditRequest("change the background"))
     }
 

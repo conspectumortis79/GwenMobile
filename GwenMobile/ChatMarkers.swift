@@ -17,30 +17,30 @@ struct RouteDecision: Equatable, Sendable {
 
 enum ChatMarkers {
     private static let decoration = CharacterSet(charactersIn: " \n\t-*\u{2022}>\u{201C}\u{201D}\"`\u{201E}\u{201A}")
+    private static let tokens = [SearchMarker.token, ChartMarker.token]
 
     static func parse(_ text: String) -> RouteDecision {
-        var rest = text.trimmingCharacters(in: decoration)
         var decision = RouteDecision()
-        var consumed = true
-        while consumed {
-            consumed = false
-            for token in [SearchMarker.token, ChartMarker.token] where rest.hasPrefix(token) {
-                if token == SearchMarker.token { decision.search = true } else { decision.chart = true }
-                rest = remainder(after: token, in: rest)
-                consumed = true
-            }
+        consume(text) { token in
+            if token == SearchMarker.token { decision.search = true } else { decision.chart = true }
         }
         return decision
     }
 
     static func strip(_ text: String) -> String {
+        consume(text) { _ in }
+    }
+
+    @discardableResult
+    private static func consume(_ text: String, didConsume: (String) -> Void) -> String {
         var rest = text.trimmingCharacters(in: decoration)
-        var changed = true
-        while changed {
-            changed = false
-            for token in [SearchMarker.token, ChartMarker.token] where rest.hasPrefix(token) {
+        var consumed = true
+        while consumed {
+            consumed = false
+            for token in tokens where rest.hasPrefix(token) {
+                didConsume(token)
                 rest = remainder(after: token, in: rest)
-                changed = true
+                consumed = true
             }
         }
         return rest

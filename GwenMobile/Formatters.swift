@@ -7,6 +7,12 @@ enum Formatters {
 
     static func time(_ date: Date) -> String { render(date, locale: L.lang.locale, pattern: L.timeFormat) }
     static func day(_ date: Date) -> String { render(date, locale: L.lang.locale, pattern: L.dayFormat) }
+
+    static func relationalDay(_ date: Date, calendar: Calendar = .current) -> String {
+        if calendar.isDateInToday(date) { return L.t("today") }
+        if calendar.isDateInYesterday(date) { return L.t("yesterday") }
+        return day(date)
+    }
     static func eventStart(_ date: Date) -> String { render(date, locale: L.lang.locale, pattern: L.calStartFormat) }
     static func eventDateTime(_ date: Date) -> String { render(date, locale: posix, pattern: eventPattern) }
 

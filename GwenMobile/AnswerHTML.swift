@@ -177,8 +177,9 @@ enum AnswerHTML {
 
     private static func markdownLinks(_ text: String) -> String {
         transform(text, #"\[([^\]\n]{1,200})\]\((https?:[^)\s]{1,500})\)"#) { match, source in
-            "<a href=\"\(substring(of: source, at: match.range(at: 2)))\">"
-                + substring(of: source, at: match.range(at: 1)) + "</a>"
+            let href = substring(of: source, at: match.range(at: 2))
+                .replacingOccurrences(of: "\"", with: "&quot;")
+            return "<a href=\"\(href)\">" + substring(of: source, at: match.range(at: 1)) + "</a>"
         }
     }
 

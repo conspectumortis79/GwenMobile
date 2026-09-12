@@ -11,6 +11,7 @@ enum CalendarService {
     static let defaultDurationMinutes = 30
     static let minAlertMinutes = 1
     static let maxAlertMinutes = 7 * 24 * 60
+    static let secondsPerDay = 86400.0
 
     private static let store = EKEventStore()
 
@@ -38,7 +39,6 @@ enum CalendarService {
 
     static func upcomingContext() -> String {
         guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return "" }
-        let secondsPerDay = 86400.0
         let predicate = store.predicateForEvents(withStart: Date().addingTimeInterval(-Double(lookbackDays) * secondsPerDay),
                                                  end: Date().addingTimeInterval(Double(lookaheadDays) * secondsPerDay),
                                                  calendars: nil)
@@ -154,7 +154,6 @@ enum CalendarService {
     }
 
     private static func find(_ query: String?) throws -> EKEvent {
-        let secondsPerDay = 86400.0
         let from = Date().addingTimeInterval(-Double(findWindowPastDays) * secondsPerDay)
         let to = Date().addingTimeInterval(Double(findWindowFutureDays) * secondsPerDay)
         let predicate = store.predicateForEvents(withStart: from, end: to, calendars: nil)

@@ -87,24 +87,13 @@ struct HistoryView: View {
     }
 
     private var alertBody: String {
-        let usage = cleaner.usage
-        let images = "\(usage.imageFiles) \(L.t("images_word")) (\(usage.imageBytesText))"
-        return L.fmt2("delete_all_body", String(usage.conversations), images)
+        L.fmt2("delete_all_body", String(cleaner.usage.conversations), cleaner.usage.imagesLine)
     }
 
     private func subtitle(_ conversation: Conversation) -> String {
         let images = conversation.messages.reduce(0) { $0 + $1.images.count + ($1.outImages ?? []).count }
-        return "\(Self.dayText(conversation.updatedAt)) · \(conversation.messages.count) \(L.t("messages_word")) · \(images) \(L.t("images_word"))"
+        return "\(Formatters.relationalDay(conversation.updatedAt)) · \(conversation.messages.count) \(L.t("messages_word")) · \(images) \(L.t("images_word"))"
     }
 
-    private func ago(_ date: Date) -> String {
-        date.formatted(date: .omitted, time: .shortened)
-    }
-
-    static func dayText(_ date: Date) -> String {
-        let cal = Calendar.current
-        if cal.isDateInToday(date) { return L.t("today") }
-        if cal.isDateInYesterday(date) { return L.t("yesterday") }
-        return date.formatted(date: .abbreviated, time: .omitted)
-    }
+    private func ago(_ date: Date) -> String { Formatters.time(date) }
 }
