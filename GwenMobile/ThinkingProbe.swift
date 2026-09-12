@@ -17,9 +17,7 @@ enum ThinkingProbe {
 
     private static func probeRequest(baseURL: String, key: String, model: String,
                                      extra: [String: Any]) throws -> URLRequest {
-        guard let url = HTTP.endpoint(baseURL, APIEndpoint.chatCompletions) else {
-            throw APIError(message: L.t("bad_url"))
-        }
+        let url = try HTTP.chatCompletionsURL(baseURL)
         var body: [String: Any] = [
             "model": model,
             "messages": [["role": "user", "content": prompt]],

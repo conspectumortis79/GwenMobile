@@ -16,9 +16,7 @@ enum VisionProbe {
     static let inconclusiveStatuses: Set<Int> = [401, 403, 404, 408, 429]
 
     static func request(baseURL: String, key: String, model: String) throws -> URLRequest {
-        guard let url = HTTP.endpoint(baseURL, APIEndpoint.chatCompletions) else {
-            throw APIError(message: L.t("bad_url"))
-        }
+        let url = try HTTP.chatCompletionsURL(baseURL)
         let body: [String: Any] = [
             "model": model,
             "max_tokens": maxTokens,

@@ -192,4 +192,27 @@ final class ConversationMemoryTests: XCTestCase {
         let history = [user("Erstes", images: ["a.jpg"]), user("Zweites", images: ["b.jpg"]), user("Noch eine Frage")]
         XCTAssertEqual(ConversationMemory.rememberedImages(from: history).map(\.file), ["a.jpg", "b.jpg"])
     }
+
+    func testABrokenFileDoesNotCostASlotOfTheBudget() {
+        let stored = (1...6).map { "p\($0).jpg" }
+        var history: [ChatMessage] = []
+        for file in stored { history.append(user("Foto", images: [file])) }
+        history.append(user("Vergleiche die bilder miteinander"))
+        let readable = Array(stored.dropFirst())
+        let turn = ConversationMemory.turn(from: history, load: loader(readable))
+        XCTAssertEqual(turn.messages.last?.images.map(\.file), Array(stored.suffix(ConversationMemory.maxPictures)))
+        XCTAssertEqual(turn.pictureCount, ConversationMemory.maxPictures)
+    }
+
+    func testTheBudgetTopsUpFromTheNextUsablePicture() {
+        let stored = (1...6).map { "p\($0).jpg" }
+        var history: [ChatMessage] = []
+        for file in stored { history.append(user("Foto", images: [file])) }
+        history.append(user("Vergleiche die bilder miteinander"))
+        let readable = [stored.first!] + stored.dropLast()
+        let turn = ConversationMemory.turn(from: history, load: loader(readable))
+        XCTAssertEqual(turn.messages.last?.images.map(\.file), ["p1.jpg", "p3.jpg", "p4.jpg", "p5.jpg"])
+        XCTAssertEqual(turn.pictureNumbers, [1, 3, 4, 5])
+        XCTAssertEqual(turn.images.count, ConversationMemory.maxPictures)
+    }
 }

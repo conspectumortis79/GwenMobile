@@ -5,9 +5,7 @@ enum QwenAPI {
                             messages: [ChatMessage], imageData: [Data],
                             stream: Bool = true, system: String? = nil,
                             thinking: ThinkingDirective = .nothing) throws -> URLRequest {
-        guard let url = HTTP.endpoint(baseURL, APIEndpoint.chatCompletions) else {
-            throw APIError(message: L.t("bad_url"))
-        }
+        let url = try HTTP.chatCompletionsURL(baseURL)
         let apiMessages: [[String: Any]] = [
             ["role": "system", "content": system ?? SystemPrompt.chat()],
         ] + zip(messages, contentParts(messages: messages, imageData: imageData)).map { m, c in
@@ -107,9 +105,7 @@ enum QwenAPI {
     static func makeImageRequest(baseURL: String, key: String, model: String,
                                  prompt: String, inputImages: [Data],
                                  isEdit: Bool = false) throws -> URLRequest {
-        guard let url = HTTP.endpoint(baseURL, APIEndpoint.chatCompletions) else {
-            throw APIError(message: L.t("bad_url"))
-        }
+        let url = try HTTP.chatCompletionsURL(baseURL)
         var parts: [[String: Any]] = []
         for data in inputImages {
             parts.append(["image": dataURL(data)])

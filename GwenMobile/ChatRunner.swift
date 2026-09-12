@@ -4,6 +4,7 @@ import Foundation
 final class ChatRunner {
     static let shared = ChatRunner()
     private var task: Task<String, Error>?
+    private var running = 0
 
     func run(_ req: URLRequest, onChunk: @escaping @MainActor (String) -> Void) async throws -> String {
         let t = Task { () -> String in
@@ -22,8 +23,10 @@ final class ChatRunner {
                 throw APIError(message: error.localizedDescription, recoveredText: full.isEmpty ? nil : full)
             }
         }
+        running += 1
+        let token = running
         task = t
-        defer { task = nil }
+        defer { if token == running { task = nil } }
         return try await t.value
     }
 

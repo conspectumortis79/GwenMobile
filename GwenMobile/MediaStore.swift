@@ -48,11 +48,6 @@ final class MediaStore: @unchecked Sendable {
         return fileManager.fileExists(atPath: url.path) ? url : nil
     }
 
-    func removeImage(named file: String) {
-        try? fileManager.removeItem(at: paths.image(file))
-        Self.ratios.drop(file)
-    }
-
     func imageFileNames() -> [String] {
         (try? fileManager.contentsOfDirectory(atPath: paths.images.path))?
             .filter { $0.hasPrefix("img_") && $0.hasSuffix(".jpg") } ?? []

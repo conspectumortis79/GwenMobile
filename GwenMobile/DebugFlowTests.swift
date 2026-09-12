@@ -16,6 +16,10 @@ enum DebugLaunchTrigger {
 }
 
 extension ChatView {
+    func lastImageCandidate() -> Attachment? {
+        ConversationMemory.rememberedImages(from: store.current?.messages ?? []).last
+    }
+
     func flowTestPicture(named file: String = flowTestBigImage) async -> UIImage? {
         guard let stored = store.media.data(named: file) else {
             flowLog.error("TEST no big image file")

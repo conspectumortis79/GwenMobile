@@ -38,7 +38,9 @@ final class StorageTests: XCTestCase {
         XCTAssertEqual(url.path, media.paths.imageURL(for: att).path)
         XCTAssertEqual(url.pathExtension, "jpg")
         XCTAssertEqual(try Data(contentsOf: url), payload)
-        media.removeImage(named: name)
+        let trashed = media.moveImagesToTrash([name])
+        XCTAssertEqual(trashed.count, 1)
+        media.emptyTrash()
         XCTAssertNil(media.storedURL(for: att))
     }
 
@@ -49,7 +51,8 @@ final class StorageTests: XCTestCase {
         let name = try XCTUnwrap(media.storeImageData(payload))
         XCTAssertTrue(name.hasPrefix("img_"))
         XCTAssertEqual(media.data(for: Attachment(file: name)), payload)
-        media.removeImage(named: name)
+        XCTAssertEqual(media.moveImagesToTrash([name]).count, 1)
+        media.emptyTrash()
         XCTAssertNil(media.data(for: Attachment(file: name)))
     }
 

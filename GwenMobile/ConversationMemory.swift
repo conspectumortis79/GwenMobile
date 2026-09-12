@@ -29,20 +29,29 @@ enum ConversationMemory {
     static let maxPictures = ImagePolicy.maxPicturesPerRequest
 
     static func turn(from messages: [ChatMessage], load: (Attachment) -> Data?) -> ModelTurn {
-        var window = window(from: messages)
-        let remembered = distinctPictures(in: Array(messages.suffix(maxMessages)))
+        var loaded: [String: Data] = [:]
+        var missing = Set<String>()
+        func data(for picture: Attachment) -> Data? {
+            if let hit = loaded[picture.file] { return hit }
+            if missing.contains(picture.file) { return nil }
+            guard let data = load(picture) else { missing.insert(picture.file); return nil }
+            loaded[picture.file] = data
+            return data
+        }
+        var window = window(from: messages) { data(for: $0) != nil }
         var bytes: [Data] = []
         var files: [String] = []
         for index in window.indices {
             var usable: [Attachment] = []
             for attachment in window[index].images {
-                guard let data = load(attachment) else { continue }
+                guard let data = data(for: attachment) else { continue }
                 usable.append(attachment)
                 bytes.append(data)
                 files.append(attachment.file)
             }
             window[index].images = usable
         }
+        let remembered = distinctPictures(in: Array(messages.suffix(maxMessages)))
         return ModelTurn(messages: window, images: bytes, pictureFiles: files,
                          pictureNumbers: numbers(of: files, in: remembered),
                          chatPictureCount: remembered.count)
@@ -58,19 +67,33 @@ enum ConversationMemory {
     }
 
     static func window(from messages: [ChatMessage]) -> [ChatMessage] {
+        window(from: messages, usable: { _ in true })
+    }
+
+    private static func window(from messages: [ChatMessage], usable: (Attachment) -> Bool) -> [ChatMessage] {
         var window = Array(messages.suffix(maxMessages))
         guard let speaker = window.indices.last(where: { window[$0].role == .user }) else {
             return window.map(cleared)
         }
-        let pictures = kept(Array(distinctPictures(in: window)))
+        let pictures = kept(Array(distinctPictures(in: window)), usable: usable)
         for index in window.indices { window[index].images = [] }
         window[speaker].images = pictures
         return window
     }
 
-    private static func kept(_ pictures: [Attachment]) -> [Attachment] {
-        guard let oldest = pictures.first, pictures.count > maxPictures else { return pictures }
-        return [oldest] + Array(pictures.suffix(maxPictures - 1))
+    private static func kept(_ pictures: [Attachment], usable: (Attachment) -> Bool) -> [Attachment] {
+        guard let oldest = pictures.first else { return [] }
+        if pictures.count <= maxPictures { return pictures.filter(usable) }
+        let oldestUsable = usable(oldest)
+        let room = maxPictures - (oldestUsable ? 1 : 0)
+        var newest: [Attachment] = []
+        for picture in pictures.reversed() {
+            if newest.count == room { break }
+            if picture.file == oldest.file { continue }
+            guard usable(picture) else { continue }
+            newest.insert(picture, at: 0)
+        }
+        return (oldestUsable ? [oldest] : []) + newest
     }
 
     private static func distinctPictures(in window: [ChatMessage]) -> [Attachment] {

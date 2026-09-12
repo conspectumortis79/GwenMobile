@@ -386,10 +386,6 @@ struct ChatView: View {
         }
     }
 
-    func lastImageCandidate() -> Attachment? {
-        ConversationMemory.rememberedImages(from: store.current?.messages ?? []).last
-    }
-
     private var emptyHint: some View {
         VStack(spacing: 8) {
             Image(systemName: "bubble.left.and.bubble.right")
@@ -720,9 +716,8 @@ struct ChatView: View {
                                   elapsed: Date().timeIntervalSince(started),
                                   to: convID, outImages: outAtts)
         } catch {
-            store.appendAssistant(AnswerError.model(error, model: imageModel, generic: L.t("err_generic")),
-                                  model: imageModel,
-                                  elapsed: Date().timeIntervalSince(started), to: convID)
+            appendFailure(AnswerError.model(error, model: imageModel, generic: L.t("err_generic")),
+                          model: imageModel, convID: convID, started: started)
         }
     }
 
@@ -748,10 +743,14 @@ struct ChatView: View {
                 await streamChat(turn: turn, history: history, convID: convID, started: started)
             }
         } catch {
-            store.appendAssistant(AnswerError.other(error, model: chatModel,
-                                                    generic: L.t("err_cal_generic")), model: chatModel,
-                                  elapsed: Date().timeIntervalSince(started), to: convID)
+            appendFailure(AnswerError.other(error, model: chatModel, generic: L.t("err_cal_generic")),
+                          model: chatModel, convID: convID, started: started)
         }
+    }
+
+    @MainActor private func appendFailure(_ text: String, model: String?,
+                                          convID: UUID, started: Date) {
+        store.appendAssistant(text, model: model, elapsed: Date().timeIntervalSince(started), to: convID)
     }
 
     @MainActor private func standaloneQuestion(_ history: [ChatMessage]) async -> String {
@@ -791,8 +790,8 @@ struct ChatView: View {
 
     @MainActor private func appendWebFailure(_ error: Error, model: String?,
                                              convID: UUID, started: Date) {
-        store.appendAssistant(AnswerError.other(error, model: model, generic: L.t("err_web_generic")),
-                              model: model, elapsed: Date().timeIntervalSince(started), to: convID)
+        appendFailure(AnswerError.other(error, model: model, generic: L.t("err_web_generic")),
+                      model: model, convID: convID, started: started)
     }
 
     @MainActor private func runChartFlow(question: String, hits: [WebHit], images: [Data],
@@ -826,9 +825,8 @@ struct ChatView: View {
             flowMark("CHART done images=\(attachments.count)")
             maybeSpeak(answer)
         } catch {
-            store.appendAssistant(AnswerError.model(error, model: imageModel,
-                                                    generic: L.t("err_generic")), model: imageModel,
-                                  elapsed: Date().timeIntervalSince(started), to: convID)
+            appendFailure(AnswerError.model(error, model: imageModel, generic: L.t("err_generic")),
+                          model: imageModel, convID: convID, started: started)
         }
     }
 
