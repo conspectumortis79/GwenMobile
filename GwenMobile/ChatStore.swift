@@ -69,9 +69,7 @@ final class ChatStore: ObservableObject {
     }
 
     var referencedFiles: Set<String> {
-        Set(conversations.flatMap { c in
-            c.messages.flatMap { m in m.images.map(\.file) + (m.outImages ?? []).map(\.file) }
-        })
+        Set(conversations.flatMap { $0.messages.flatMap(\.imageFiles) })
     }
 
     func removeAllConversations() -> [(index: Int, conversation: Conversation)] {

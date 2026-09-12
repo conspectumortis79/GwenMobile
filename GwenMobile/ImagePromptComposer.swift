@@ -40,8 +40,8 @@ enum ImagePromptComposer {
         return String(prompt.prefix(maxPromptChars))
     }
 
-    static func instructions() -> String {
-        """
+    static func instructions(pictures: Int = 1) -> String {
+        var text = """
         You write the final prompt for an image generation model. That model never sees the conversation, \
         so your prompt has to carry everything the picture needs.
         Reply with ONLY the prompt text, no preamble, no quotes, no markdown fences, at most 500 characters, \
@@ -52,6 +52,12 @@ enum ImagePromptComposer {
         "the previous picture" — name what they stand for instead.
         If the NEUE FRAGE is already self-contained, repeat it unchanged.
         """
+        guard pictures > 1 else { return text }
+        text += """
+
+        The generation model receives \(pictures) pictures of this conversation, in the order they appeared and numbered from 1 (the oldest) to \(pictures) (the newest). Name the picture that must be edited by that number, describe it by its content too, and say which other picture is the colour, style or detail reference.
+        """
+        return text
     }
 
     private static func stripFences(_ raw: String) -> String {

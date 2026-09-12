@@ -17,9 +17,10 @@ enum IntentHeuristics {
                                                      "verschieb", "absage", "erinner", "treffen", "geburtstag", "zusage",
                                                      "blocke", "blockier", "freez", "slot", "eintrage", "eintrg", "anlegen",
                                                      "reminder", "schedule", "calendar", "delete the appoint", "cancel the"])
-    static let imageEditTopic = PhraseMatch(phrases: ["änder", "veränder", "bearbeit", "färb", "entfern", "wegmach", "lösche",
-                                                      "hinzufüg", "ersetze", "mach ", "mache", "gestalte", "retuschier",
-                                                      "freistell", "hintergrund", "style", "color", "colour",
+    static let imageEditTopic = PhraseMatch(phrases: ["änder", "veränder", "bearbeit", "färb", "farb", "übertrag", "entfern",
+                                                      "wegmach", "lösche", "hinzufüg", "ersetze", "mach ", "mache",
+                                                      "gestalte", "retuschier", "freistell", "hintergrund", "style",
+                                                      "color", "colour",
                                                       "edit", "change", "recolor", "recolour", "remove", "erase",
                                                       "replace", "paint", "turn it", "make it", "background"])
     static let safetyRejection = PhraseMatch(phrases: ["datainspectionfailed", "green net", "content_filter"])

@@ -52,8 +52,13 @@ enum SendRouter {
     }
 
     private static func conversationRoute(_ body: String, context: SendContext) -> SendRoute {
-        if IntentHeuristics.looksLikeImageRequest(body) { return .imageCreate }
+        if IntentHeuristics.looksLikeImageRequest(body), !IntentHeuristics.looksLikeEditRequest(body) {
+            return .imageCreate
+        }
         if IntentHeuristics.looksLikeCalendarRequest(body) { return .calendar }
+        if context.rememberedImage, context.intent == .create, IntentHeuristics.looksLikeEditRequest(body) {
+            return .imageEdit
+        }
         if let intent = context.intent, intent != .chat { return route(for: intent) }
         if context.rememberedImage, context.intent == nil, IntentHeuristics.looksLikeEditRequest(body) {
             return .imageEdit

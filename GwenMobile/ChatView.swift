@@ -114,7 +114,7 @@ struct ChatView: View {
             }
             CameraPresenter.shared.onImage = { img in
                 flowMark("CAMERA image size=\(Int(img.size.width))x\(Int(img.size.height))")
-                pendingImages = [(image: img, file: nil)]
+                queue(pictures: [(image: img, file: nil)])
             }
             if (listenToken?.wrappedValue ?? 0) > 0 { startListeningFromShortcut() }
             #if DEBUG
@@ -362,6 +362,10 @@ struct ChatView: View {
         !isBusy && !isStreaming && (!input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !pendingImages.isEmpty)
     }
 
+    func queue(pictures: [(image: UIImage, file: String?)]) {
+        pendingImages = Array((pendingImages + pictures).prefix(ImagePolicy.maxPicturesPerRequest))
+    }
+
     func attachForEditing(_ att: Attachment) {
         let t0 = ContinuousClock.now
         guard let img = store.media.decodedDisplayImage(named: att.file) else { return }
@@ -480,7 +484,8 @@ struct ChatView: View {
             Button { attachMenu = false; CameraPresenter.shared.present() } label: {
                 menuRow("camera", camLbl, state: nil, on: false)
             }
-            PhotosPicker(selection: $pendingItems, maxSelectionCount: 1, matching: .images) {
+            PhotosPicker(selection: $pendingItems, maxSelectionCount: ImagePolicy.maxPicturesPerRequest,
+                         matching: .images) {
                 menuRow("photo.on.rectangle.angled", photoLbl, state: nil, on: false)
             }
             .onChange(of: pendingItems) { _, items in
@@ -488,15 +493,17 @@ struct ChatView: View {
                     withAnimation(.easeInOut(duration: 0.15)) { attachMenu = false }
                 }
                 Task {
+                    var picked: [(image: UIImage, file: String?)] = []
                     for item in items {
                         if let data = try? await item.loadTransferable(type: Data.self) {
                             let img = await Task.detached(priority: .userInitiated, operation: {
                                 MediaStore.thumbnail(data, maxPixel: ImagePolicy.uploadMaxPixel)
                             }).value
                             flowMark("PICKER decoded bytes=\(data.count) ok=\(img != nil)")
-                            if let img { pendingImages = [(image: img, file: nil)] }
+                            if let img { picked.append((image: img, file: nil)) }
                         }
                     }
+                    queue(pictures: picked)
                     pendingItems = []
                 }
             }
@@ -601,11 +608,12 @@ struct ChatView: View {
 
         switch SendRouter.route(text: text, context: context) {
         case .imageEdit:
-            await runImageFlow(prompt: text, history: history, images: turn.images, isEdit: true,
+            await runImageFlow(prompt: text, history: history, turn: turn,
+                               fresh: attachments.map(\.file), isEdit: true,
                                convID: convID, started: started)
         case .imageCreate:
-            await runImageFlow(prompt: text, history: history, images: [], isEdit: false,
-                               convID: convID, started: started)
+            await runImageFlow(prompt: text, history: history, turn: turn.withoutPictures(), fresh: [],
+                               isEdit: false, convID: convID, started: started)
         case .calendar:
             await runCalendarFlow(turn: turn, text: text, history: history, convID: convID, started: started)
         case .chart(let webData):
@@ -622,11 +630,15 @@ struct ChatView: View {
         }
     }
 
-    @MainActor private func imagePrompt(_ text: String, history: [ChatMessage]) async -> String {
-        guard ImagePromptComposer.needsConversationContext(text, history: history) else { return text }
+    @MainActor private func imagePrompt(_ text: String, history: [ChatMessage],
+                                        pictures: Int) async -> String {
+        guard pictures > 1 || ImagePromptComposer.needsConversationContext(text, history: history) else {
+            return text
+        }
         let composed = try? await QwenAPI.composeImagePrompt(baseURL: settings.baseURL, key: settings.apiKey,
                                                              model: settings.chatModel,
                                                              instruction: text, history: history,
+                                                             pictures: pictures,
                                                              thinking: settings.thinkingOffDirective(for: settings.chatModel))
         guard let composed else { return text }
         flowMark("CTX bild frage=\(text.prefix(40))\u{2192} prompt=\(composed.prefix(90))")
@@ -645,21 +657,44 @@ struct ChatView: View {
         return route
     }
 
-    @MainActor private func runImageFlow(prompt: String, history: [ChatMessage], images: [Data],
-                                         isEdit: Bool, convID: UUID, started: Date) async {
+    @MainActor private func runImageFlow(prompt: String, history: [ChatMessage], turn: ModelTurn,
+                                         fresh: [String], isEdit: Bool,
+                                         convID: UUID, started: Date) async {
         imageWorking = true
         workingIsEdit = isEdit
         defer { imageWorking = false }
         let baseURL = settings.baseURL
         let key = settings.apiKey
         let imageModel = settings.imageModel
+        let images = turn.images
         let instruction = prompt.isEmpty ? L.t("image_default_prompt") : prompt
-        let text = isEdit ? instruction : await imagePrompt(instruction, history: history)
-        flowMark("IMAGEFLOW start edit=\(isEdit) images=\(images.count) prompt=\(text.prefix(60))")
+        let directed = isEdit && images.count > 1
+            ? await PictureDirector.observe(baseURL: baseURL, key: key, model: settings.visionModel,
+                                            instruction: instruction, pictures: images,
+                                            shown: turn.pictureNumbers, total: turn.chatPictureCount,
+                                            fresh: turn.positions(of: fresh),
+                                            thinking: settings.thinkingOffDirective(for: settings.visionModel))
+            : nil
+        if directed == .unreachable {
+            store.appendAssistant(L.fmt("picture_out_of_memory", String(turn.picturesLeftBehind)),
+                                  model: imageModel, elapsed: Date().timeIntervalSince(started), to: convID)
+            return
+        }
+        let text: String
+        if case .edit(_, _, let rewritten)? = directed {
+            text = rewritten
+        } else if isEdit {
+            text = instruction
+        } else {
+            text = await imagePrompt(instruction, history: history, pictures: images.count)
+        }
+        let pictures = directed?.pictures(from: images) ?? images
+        flowMark("IMAGEFLOW start edit=\(isEdit) bilder=\(pictures.count) \(directed?.trace ?? "ohne regie") "
+                 + "prompt=\(text.prefix(60))")
         let delivery = ImageDelivery(media: store.media)
         do {
             let urls = try await delivery.generate(baseURL: baseURL, key: key, model: imageModel,
-                                                  prompt: text, inputImages: images, isEdit: isEdit)
+                                                  prompt: text, inputImages: pictures, isEdit: isEdit)
             flowMark("IMAGEFLOW generated urls=\(urls.count)")
             let outAtts = try await delivery.store(urls)
             guard !outAtts.isEmpty else {

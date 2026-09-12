@@ -79,4 +79,12 @@ final class ImagePromptComposerTests: XCTestCase {
         XCTAssertTrue(instructions.contains("davon"))
         XCTAssertTrue(instructions.contains("repeat it unchanged"))
     }
+
+    func testInstructionsNameTheTargetPictureByItsNumberWhenSeveralPicturesComeAlong() {
+        let single = ImagePromptComposer.instructions()
+        let several = ImagePromptComposer.instructions(pictures: 3)
+        XCTAssertFalse(single.contains("numbered from 1 (the oldest)"))
+        XCTAssertTrue(several.contains("numbered from 1 (the oldest) to 3 (the newest)"))
+        XCTAssertTrue(several.contains("Name the picture that must be edited by that number"))
+    }
 }

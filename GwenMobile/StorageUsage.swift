@@ -50,8 +50,7 @@ enum StorageMeasurement {
 
     private static func referencedBytes(of conversation: Conversation, sizes: [String: Int]) -> Int {
         conversation.messages.reduce(0) { total, message in
-            total + message.images.reduce(0) { $0 + (sizes[$1.file] ?? 0) }
-                + (message.outImages ?? []).reduce(0) { $0 + (sizes[$1.file] ?? 0) }
+            total + message.pictures.reduce(0) { $0 + (sizes[$1.file] ?? 0) }
         }
     }
 }

@@ -109,13 +109,13 @@ final class ChatStoreTests: XCTestCase {
         let first = try XCTUnwrap(store.currentID)
         store.newConversation()
         let second = try XCTUnwrap(store.currentID)
-        store.removeConversation(second)
+        _ = store.removeConversation(second)
         XCTAssertEqual(store.currentID, first)
     }
 
     func testRemovingTheLastConversationCreatesAFreshOne() throws {
         let (store, _) = makeSandbox()
-        store.removeConversation(try XCTUnwrap(store.currentID))
+        _ = store.removeConversation(try XCTUnwrap(store.currentID))
         XCTAssertEqual(store.conversations.count, 1)
         XCTAssertEqual(store.current?.title, L.defaultTitle)
     }

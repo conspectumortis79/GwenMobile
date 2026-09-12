@@ -36,3 +36,22 @@ enum APIErrorParser {
         return trimmed.isEmpty ? nil : String(trimmed.prefix(200))
     }
 }
+
+enum JSONFragment {
+    static func data(of text: String) -> Data? {
+        guard let start = text.firstIndex(of: "{"), let end = text.lastIndex(of: "}"), start < end,
+              let slice = String(text[start...end]).data(using: .utf8) else { return nil }
+        return slice
+    }
+
+    static func decode<Outcome: Decodable>(_ type: Outcome.Type, from text: String) -> Outcome? {
+        guard let data = data(of: text) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
+    }
+
+    static func object(from text: String) -> [String: Any]? {
+        guard let data = data(of: text),
+              let parsed = try? JSONSerialization.jsonObject(with: data) else { return nil }
+        return parsed as? [String: Any]
+    }
+}

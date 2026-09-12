@@ -417,6 +417,104 @@ extension ChatView {
         UIApplication.shared.isIdleTimerDisabled = false
     }
 
+    func runPictureSweep() async {
+        UIApplication.shared.isIdleTimerDisabled = true
+        var report = SweepReport()
+        PictureProbe.materialise(in: store.media)
+        let wanted = PictureProbe.all
+        let missing = wanted.filter { store.media.data(named: $0.file) == nil }
+        report.add("SETUP", "bild=\(settings.imageModel) vision=\(settings.visionModel) chat=\(settings.chatModel) "
+                   + "kap=\(ConversationMemory.maxPictures) fehlend=\(missing.map { $0.file }.joined(separator: ","))")
+        for fixture in PictureProbe.all {
+            if let picture = store.media.decodedDisplayImage(named: fixture.file) {
+                report.add("FIXTURE_\(fixture.file)", "\(PictureProbe.rgbText(picture)) form=\(fixture.shape) "
+                           + "farbe=\(fixture.colour)")
+            }
+        }
+        guard missing.isEmpty, settings.isConfigured else {
+            report.add("ABBRUCH", "testbilder fehlen oder schluessel fehlt")
+            report.write(into: PictureProbe.report)
+            UIApplication.shared.isIdleTimerDisabled = false
+            return
+        }
+
+        store.newConversation()
+        let chatID = store.current?.id
+        for fixture in PictureProbe.fixtures { await postPicture(fixture) }
+        let baseline = store.current?.messages ?? []
+        let remembered = ConversationMemory.rememberedImages(from: baseline).map(\.file)
+        report.add("BASELINE", "nachrichten=\(baseline.count) erinnert=\(remembered.count) "
+                   + "reihenfolge=\(remembered.joined(separator: ","))")
+
+        for testCase in PictureProbe.cases {
+            restore(messages: baseline, into: chatID)
+            for fixture in testCase.extra { await postPicture(fixture) }
+            let history = store.current?.messages ?? []
+            report.add("AUSWAHL_\(testCase.name)",
+                       "erinnert=\(ConversationMemory.rememberedImages(from: history).map { $0.file }.joined(separator: ",")) "
+                       + "anhang=\(testCase.attached?.file ?? "-") kap=\(ConversationMemory.maxPictures)")
+            pendingImages = []
+            if let attached = testCase.attached,
+               let picture = store.media.decodedDisplayImage(named: attached.file) {
+                pendingImages = [(image: picture, file: attached.file)]
+            }
+            input = testCase.instruction
+            await send()
+            let reply = store.current?.messages.last ?? ChatMessage(role: .assistant, text: "keine antwort")
+            let file = (reply.outImages ?? []).first?.file ?? ""
+            let folded = PictureProbe.folded(reply.text)
+            let colourMatched = testCase.colours.contains { folded.contains($0) }
+            if !testCase.expectsPicture {
+                report.add("FALL_\(testCase.name)", "bild_erwartet=nein out=\(file.isEmpty ? "none" : file) "
+                           + "form_ok=\(folded.contains(testCase.shape)) farbe_ok=\(colourMatched) "
+                           + "text=\(prefix(reply.text))")
+                continue
+            }
+            let picture = file.isEmpty ? nil : store.media.exportImage(named: file)
+            let shape = await describePicture(file: file, question: testCase.question)
+            let count = await describePicture(file: file, question: PictureProbe.objectCountQuestion)
+            let look = shape + " " + count
+            let seen = PictureProbe.folded(look)
+            let foreign = PictureProbe.foreignShapes(except: testCase.shape)
+            report.add("FALL_\(testCase.name)",
+                       "datei=\(file) gemessen=\(picture.map { PictureProbe.rgbText($0) } ?? "-") "
+                           + "form_erwartet=\(testCase.shape) form_ok=\(seen.contains(testCase.shape)) "
+                           + "farben_erwartet=\(testCase.colours.joined(separator: "|")) "
+                           + "farbe_ok=\(testCase.colours.contains { seen.contains($0) }) "
+                           + "fremde_formen_ok=\(!foreign.contains { seen.contains($0) }) "
+                           + "sicht=\(String(look.prefix(150)).replacingOccurrences(of: "\n", with: " "))")
+        }
+        report.write(into: PictureProbe.report)
+        flowLog.info("PICTURESWEEP bericht geschrieben")
+        UIApplication.shared.isIdleTimerDisabled = false
+    }
+
+    private func postPicture(_ fixture: PictureProbe.Fixture) async {
+        guard let picture = store.media.decodedDisplayImage(named: fixture.file) else { return }
+        pendingImages = [(image: picture, file: fixture.file)]
+        input = ""
+        await send()
+    }
+
+    private func restore(messages: [ChatMessage], into id: UUID?) {
+        guard let index = store.conversations.firstIndex(where: { $0.id == id }) else { return }
+        store.conversations[index].messages = messages
+    }
+
+    private func describePicture(file: String, question: String) async -> String {
+        guard let data = store.media.data(named: file) else { return "kein bild geladen" }
+        do {
+            let req = try QwenAPI.makeRequest(baseURL: settings.baseURL, key: settings.apiKey,
+                                              model: settings.visionModel,
+                                              messages: [ChatMessage(role: .user, text: question,
+                                                                     images: [Attachment(file: file)])],
+                                              imageData: [data])
+            return try await ChatRunner.shared.run(req) { _ in }
+        } catch {
+            return "FEHLER " + error.localizedDescription
+        }
+    }
+
     private static func dataPoints(_ text: String) -> Int {
         text.components(separatedBy: "\n").filter { $0.hasPrefix("- ") }.count
     }
@@ -427,6 +525,195 @@ extension ChatView {
 
     private func prefix(_ text: String) -> String {
         String(text.prefix(70)).replacingOccurrences(of: "\n", with: " ")
+    }
+}
+
+enum PictureProbe {
+    static let report = "picture_sweep.txt"
+
+    enum Kind {
+        case ellipse, rectangle, triangle, star, roundedRectangle
+    }
+
+    struct Fixture {
+        let file: String
+        let shape: String
+        let colour: String
+        let canvas: CGSize
+        let background: UIColor
+        let object: UIColor
+        let kind: Kind
+
+        func image() -> UIImage {
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1
+            return UIGraphicsImageRenderer(size: canvas, format: format).image { context in
+                background.setFill()
+                context.fill(CGRect(origin: .zero, size: canvas))
+                object.setFill()
+                let path = UIBezierPath()
+                switch kind {
+                case .ellipse:
+                    let box = inset(0.34)
+                    path.append(UIBezierPath(roundedRect: box, cornerRadius: box.width / 2))
+                case .rectangle:
+                    path.append(UIBezierPath(rect: inset(0.28)))
+                case .roundedRectangle:
+                    path.append(UIBezierPath(roundedRect: inset(0.3), cornerRadius: canvas.width * 0.03))
+                case .triangle:
+                    let box = inset(0.22)
+                    path.move(to: CGPoint(x: box.midX, y: box.minY))
+                    path.addLine(to: CGPoint(x: box.maxX, y: box.maxY))
+                    path.addLine(to: CGPoint(x: box.minX, y: box.maxY))
+                    path.close()
+                case .star:
+                    star(into: path)
+                }
+                path.fill()
+            }
+        }
+
+        private func inset(_ ratio: CGFloat) -> CGRect {
+            let side = min(canvas.width, canvas.height)
+            let box = CGSize(width: side * (1 - ratio * 2), height: side * (1 - ratio * 2))
+            return CGRect(x: (canvas.width - box.width) / 2, y: (canvas.height - box.height) / 2,
+                          width: box.width, height: box.height)
+        }
+
+        private func star(into path: UIBezierPath) {
+            let box = inset(0.18)
+            let centre = CGPoint(x: box.midX, y: box.midY)
+            let outer = min(box.width, box.height) / 2
+            for point in 0..<10 {
+                let radius = point.isMultiple(of: 2) ? outer : outer * 0.42
+                let angle = -CGFloat.pi / 2 + CGFloat(point) * .pi / 5
+                let at = CGPoint(x: centre.x + radius * cos(angle), y: centre.y + radius * sin(angle))
+                if point == 0 { path.move(to: at) } else { path.addLine(to: at) }
+            }
+            path.close()
+        }
+
+        func data() -> Data? {
+            image().jpegData(compressionQuality: ImagePolicy.jpegQuality)
+        }
+    }
+
+    struct TestCase {
+        let name: String
+        var attached: Fixture? = nil
+        var extra: [Fixture] = []
+        let instruction: String
+        let shape: String
+        let colours: [String]
+        var expectsPicture = true
+        var question = PictureProbe.shapeQuestion
+    }
+
+    static let circle = Fixture(file: "img_probe_kreis.jpg", shape: "kreis", colour: "rot",
+                                canvas: CGSize(width: 900, height: 1400),
+                                background: UIColor(white: 0.98, alpha: 1),
+                                object: UIColor(red: 0.82, green: 0.13, blue: 0.15, alpha: 1),
+                                kind: .ellipse)
+    static let square = Fixture(file: "img_probe_quadrat.jpg", shape: "quadrat", colour: "blau",
+                                canvas: CGSize(width: 1400, height: 900),
+                                background: UIColor(red: 0.13, green: 0.13, blue: 0.15, alpha: 1),
+                                object: UIColor(red: 0.12, green: 0.35, blue: 0.78, alpha: 1),
+                                kind: .rectangle)
+    static let triangle = Fixture(file: "img_probe_dreieck.jpg", shape: "dreieck", colour: "grun",
+                                  canvas: CGSize(width: 1100, height: 1100),
+                                  background: UIColor(red: 0.67, green: 0.84, blue: 0.98, alpha: 1),
+                                  object: UIColor(red: 0.11, green: 0.59, blue: 0.28, alpha: 1),
+                                  kind: .triangle)
+    static let star = Fixture(file: "img_probe_stern.jpg", shape: "stern", colour: "gelb",
+                              canvas: CGSize(width: 1000, height: 1300),
+                              background: UIColor(red: 0.06, green: 0.25, blue: 0.17, alpha: 1),
+                              object: UIColor(red: 0.94, green: 0.78, blue: 0.12, alpha: 1),
+                              kind: .star)
+    static let rectangle = Fixture(file: "img_probe_rechteck.jpg", shape: "rechteck", colour: "schwarz",
+                                   canvas: CGSize(width: 1300, height: 800),
+                                   background: UIColor(red: 0.98, green: 0.88, blue: 0.67, alpha: 1),
+                                   object: UIColor(white: 0.1, alpha: 1),
+                                   kind: .roundedRectangle)
+
+    static let fixtures = [circle, square, triangle, star]
+    static var all: [Fixture] { fixtures + [rectangle] }
+
+    static func materialise(in media: MediaStore) {
+        for fixture in all where media.data(named: fixture.file) == nil {
+            if let data = fixture.data() {
+                try? data.write(to: media.paths.image(fixture.file))
+            }
+        }
+    }
+
+    static let shapeQuestion = "Sage in genau einem Satz: Welche Hauptform siehst du, und welche Farbe hat sie?"
+    static let sizeQuestion = "Sage in genau einem Satz: Welche Hauptform siehst du, welche Farbe hat sie, "
+        + "wie groß füllt sie das Bild (klein, mittel oder fast vollständig), und wie viele verschiedene "
+        + "Hauptformen sind es insgesamt?"
+    static let objectCountQuestion = "Antworte mit genau einem Wort (eins, zwei oder drei): Wie viele "
+        + "verschiedene Hauptformen (Objekte) sind in diesem Bild zu sehen?"
+    static let backgroundQuestion = "Sage in genau einem Satz: Welche Hauptform siehst du in welcher Farbe, "
+        + "und welche Farbe hat der Hintergrund?"
+
+    static let cases: [TestCase] = [
+        TestCase(name: "farbe_zweites_auf_erstes",
+                 instruction: "Übertrage die Farbe aus dem zweiten Foto auf das erste Foto.",
+                 shape: "kreis", colours: ["blau"]),
+        TestCase(name: "farbe_viertes_auf_erstes",
+                 instruction: "Nimm die Farbe vom vierten Bild und male das erste Bild damit an.",
+                 shape: "kreis", colours: ["gelb"]),
+        TestCase(name: "farbe_erstes_auf_drittes",
+                 instruction: "Gib dem dritten Foto die Farbe des ersten Fotos.",
+                 shape: "dreieck", colours: ["rot"]),
+        TestCase(name: "frisch_mitgeschickt_auf_erstes", attached: square,
+                 instruction: "Übertrage die Farbe von dem Foto, das ich dir gerade mitschicke, "
+                 + "auf das erste Foto im Chat.",
+                 shape: "kreis", colours: ["blau"]),
+        TestCase(name: "groesse_viertes_wie_erstes",
+                 instruction: "Mache den Gegenstand aus dem vierten Foto genau so groß wie den "
+                 + "Gegenstand aus dem ersten Foto.",
+                 shape: "stern", colours: ["gelb"], question: sizeQuestion),
+        TestCase(name: "hintergrund_zweites_auf_viertes",
+                 instruction: "Nimm den Hintergrund aus dem zweiten Foto und gib das vierte Foto damit wieder.",
+                 shape: "stern", colours: ["grau", "schwarz", "dunkel"], question: backgroundQuestion),
+        TestCase(name: "nur_frage_kein_bild",
+                 instruction: "Was ist auf dem ersten Foto zu sehen?",
+                 shape: "kreis", colours: ["rot"], expectsPicture: false),
+        TestCase(name: "ueberlauf_kappe_haelt_erstes_und_neueste", extra: [rectangle],
+                 instruction: "Ändere die Farbe des ersten Fotos in die Farbe des dritten Fotos.",
+                 shape: "kreis", colours: ["grun"]),
+    ]
+
+    static func folded(_ text: String) -> String { CalendarChoice.normalize(text) }
+
+    static func foreignShapes(except shape: String) -> [String] {
+        all.map(\.shape).filter { $0 != shape }
+    }
+
+    static func meanRGB(of image: UIImage) -> (Int, Int, Int) {
+        let side = 24
+        guard let cg = image.cgImage else { return (0, 0, 0) }
+        var pixels = [UInt8](repeating: 0, count: side * side * 4)
+        guard let context = CGContext(data: &pixels, width: side, height: side, bitsPerComponent: 8,
+                                     bytesPerRow: side * 4,
+                                     space: CGColorSpaceCreateDeviceRGB(),
+                                     bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            return (0, 0, 0)
+        }
+        context.draw(cg, in: CGRect(x: 0, y: 0, width: side, height: side))
+        var red = 0, green = 0, blue = 0
+        for offset in stride(from: 0, to: pixels.count, by: 4) {
+            red += Int(pixels[offset])
+            green += Int(pixels[offset + 1])
+            blue += Int(pixels[offset + 2])
+        }
+        let count = side * side
+        return (red / count, green / count, blue / count)
+    }
+
+    static func rgbText(_ image: UIImage) -> String {
+        let rgb = meanRGB(of: image)
+        return "\(Int(image.size.width))x\(Int(image.size.height)) rgb(\(rgb.0),\(rgb.1),\(rgb.2))"
     }
 }
 #endif

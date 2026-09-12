@@ -67,6 +67,7 @@ final class ShareSessionTests: XCTestCase {
 
     func testComingBackToTheForegroundWithoutAHandoverKeepsThePresentationOpen() {
         let (session, closer, foreground) = makeSession()
+        session.noteHandover(nil)
         foreground.returnToForeground()
         XCTAssertEqual(closer.closeCount, 0, "ein Programmwechsel mitten in der Auswahl darf das Fenster nicht zubauen")
     }

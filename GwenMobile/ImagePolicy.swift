@@ -10,4 +10,5 @@ enum ImagePolicy {
     static let jpegQuality: CGFloat = 0.8
     static let cacheCostFactor = 4
     static let memoryCostLimit = 128 * 1024 * 1024
+    static let maxPicturesPerRequest = 4
 }

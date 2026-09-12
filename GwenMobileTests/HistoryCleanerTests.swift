@@ -101,7 +101,7 @@ final class HistoryCleanerTests: XCTestCase {
 
     func testDiscardingReceiptEmptiesTrashForGood() throws {
         let (store, cleaner, media, paths) = makeSandbox()
-        let name = try attach(media, to: store)
+        try attach(media, to: store)
         cleaner.deleteConversation(try XCTUnwrap(store.currentID))
         XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: paths.trash.path).isEmpty)
         cleaner.discardPendingDeletion()

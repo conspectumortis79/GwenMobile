@@ -35,6 +35,10 @@ extension ChatView {
             await runSweep()
             return
         }
+        if name == "picsweep" {
+            await runPictureSweep()
+            return
+        }
         if name == "chartprobe" {
             await runChartProbe()
             return
@@ -67,7 +71,7 @@ extension ChatView {
             attachMenu = true
             return
         }
-        let all = store.conversations.flatMap { c in c.messages.flatMap { $0.images + ($0.outImages ?? []) } }
+        let all = store.conversations.flatMap { c in c.messages.flatMap(\.pictures) }
         if name == "typetest" || name == "scrolltest" {
             UIApplication.shared.isIdleTimerDisabled = true
             guard let conv = store.conversations.first(where: { c in
@@ -229,7 +233,7 @@ extension ChatView {
             try? await Task.sleep(for: .milliseconds(1500))
             for i in 1...flowTestRounds {
                 flowLog.info("TRIPLE run=\(i) begin")
-                let pool = conv.messages.flatMap { $0.images + ($0.outImages ?? []) }
+                let pool = conv.messages.flatMap(\.pictures)
                 guard let cand = pool.last(where: { a in store.media.data(for: a) != nil }) ?? pool.last else { flowLog.error("TRIPLE run=\(i) no candidate"); break }
                 let t0 = ContinuousClock.now
                 attachForEditing(cand)

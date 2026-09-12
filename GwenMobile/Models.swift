@@ -29,7 +29,8 @@ struct ChatMessage: Identifiable, Codable, Hashable {
 }
 
 extension ChatMessage {
-    var imageFiles: [String] { images.map(\.file) + (outImages ?? []).map(\.file) }
+    var pictures: [Attachment] { images + (outImages ?? []) }
+    var imageFiles: [String] { pictures.map(\.file) }
 }
 
 struct Conversation: Identifiable, Codable {

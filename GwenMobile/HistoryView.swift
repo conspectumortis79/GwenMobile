@@ -91,7 +91,7 @@ struct HistoryView: View {
     }
 
     private func subtitle(_ conversation: Conversation) -> String {
-        let images = conversation.messages.reduce(0) { $0 + $1.images.count + ($1.outImages ?? []).count }
+        let images = conversation.messages.reduce(0) { $0 + $1.pictures.count }
         return "\(Formatters.relationalDay(conversation.updatedAt)) · \(conversation.messages.count) \(L.t("messages_word")) · \(images) \(L.t("images_word"))"
     }
 

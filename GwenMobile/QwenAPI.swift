@@ -75,10 +75,12 @@ enum QwenAPI {
     static func composeImagePrompt(baseURL: String, key: String, model: String,
                                    instruction: String,
                                    history: [ChatMessage],
+                                   pictures: Int = 1,
                                    thinking: ThinkingDirective = .nothing) async throws -> String? {
         let req = try makeRequest(baseURL: baseURL, key: key, model: model,
                                   messages: ImagePromptComposer.requestMessages(text: instruction, history: history),
-                                  imageData: [], stream: false, system: ImagePromptComposer.instructions(),
+                                  imageData: [], stream: false,
+                                  system: ImagePromptComposer.instructions(pictures: pictures),
                                   thinking: thinking)
         guard let raw = try await askText(req) else { return nil }
         return ImagePromptComposer.usablePrompt(raw, insteadOf: instruction)
@@ -112,9 +114,12 @@ enum QwenAPI {
         for data in inputImages {
             parts.append(["image": dataURL(data)])
         }
-        let finalText = (isEdit && !inputImages.isEmpty)
-            ? L.t("edit_frame").replacingOccurrences(of: "%@", with: prompt)
-            : prompt
+        let finalText: String
+        if !isEdit || inputImages.isEmpty {
+            finalText = prompt
+        } else {
+            finalText = L.fmt(inputImages.count == 1 ? "edit_frame" : "edit_frame_multi", prompt)
+        }
         parts.append(["text": finalText])
         let body: [String: Any] = [
             "model": model,
@@ -154,13 +159,14 @@ enum QwenAPI {
         let sys = """
         You are a router for an image tool. The user always attaches one or more existing images \
         plus a text instruction. Reply with exactly one word.
-        EDIT — the instruction asks to modify the attached image itself: recoloring or repainting \
-        an object, removing/adding/replacing something in the scene, changing the background, \
-        style transfer, retouching, extending, fixing, annotating the same picture. \
+        EDIT — the instruction asks to modify an existing picture of the chat: recoloring or repainting \
+        an object, removing/adding/replacing something in the scene, changing the background, the size or \
+        the proportions of an object, style transfer, retouching, extending, fixing, annotating the same \
+        picture, or copying a colour, style or size from one of the shown pictures onto another one. \
         Examples: "make the mouse blue", "remove the watermark", "turn it into a cartoon", \
-        "färbe die Maus blau", "hintergrund schwarz".
-        CREATE — the instruction wants a brand-new picture that does not keep the attached image \
-        as the scene, possibly only inspired by it. \
+        "färbe die Maus blau", "hintergrund schwarz", "mache den gegenstand so groß wie auf dem anderen foto".
+        CREATE — the instruction wants a brand-new picture whose subject is described purely in words, \
+        not one of the pictures already shown, possibly only inspired by them. \
         Examples: "generate a wallpaper of a futuristic city", "draw a dragon like this one".
         CHAT — the instruction is a question or conversation about the image, or anything that \
         does not ask for a picture output. Examples: "what species is this?", "wer ist das?", \

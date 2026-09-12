@@ -36,7 +36,7 @@ final class MarkdownRendererTests: XCTestCase {
         XCTAssertEqual(plain(""), "")
     }
 
-    func testWorstParseOfAGrowingAnswerStaysBelowTheThrottleInterval() {
+    @MainActor func testWorstParseOfAGrowingAnswerStaysBelowTheThrottleInterval() {
         let answer = String(repeating: "Der **Zahnarzt** kostet `50 €` [Details](https://example.com/z) "
             + "und morgen *viel* mehr Text für eine lange Antwort.\n\n", count: 12)
         var worst = Duration.zero

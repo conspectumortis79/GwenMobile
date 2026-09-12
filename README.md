@@ -12,25 +12,26 @@ Swift 6, strict concurrency, iOS 17+.
   ON/OFF state) — camera first, because the photo is only the fallback when you cannot aim;
   mic and send stay one tap away, so the text field is roughly twice as wide
 - Multiple conversations, persisted locally (JSON + images in the app sandbox)
-- Every request is sent in context: the conversation (its last 30 turns) plus the newest picture — yours or
-  AI-generated — so follow-up questions, diagrams and new pictures build on what came before
+- Every request is sent in context: the conversation (its last 30 turns) plus the pictures it holds —
+  attachments and AI-generated ones, newest last — so follow-up questions, diagrams, colour transfers and
+  new pictures build on what came before
 - API key stored in the Keychain, never in files
 - Bilingual UI (German / English), day separators, timestamps, markdown-lite rendering
   (bold, inline code, links) applied to the live stream as well; a marker that is still open,
   like `**` without its partner, simply stays plain text until the closing token arrives
 - Branded header: app icon beside the left-aligned "GwenMobile" title, actions right-aligned
 - One waiting indicator everywhere the AI is busy and you have to wait — the word
-  (`Verarbeite` / `Processing`, or the specific task such as `Erzeuge Bild`,
-  `Kümmere mich um den Termin`, `Ich suche im Internet`) plus three dots that count up
+  (`Processing`, or the specific task such as `Generating image`,
+  `Handling the appointment`, `Searching the web`) plus three dots that count up
   0 → 1 → 2 → 3 every 2 s, in place of any spinning wheel
 - Long-press any answer to store it as a file: the export is **rendered HTML**, not the raw
   markdown the model produced — bold, italics, inline code, lists, headings, links and the
   numbered source list all show up formatted, in light and dark appearance, and the file prints
   to PDF straight from the share sheet. The file is named after the **user's question**
   (letters and digits only, no `?`, `!`, quotes or emoji, first nine words), so
-  `Was ist die Hauptstadt von Frankreich?` becomes `Was ist die Hauptstadt von Frankreich.html`;
-  a name clash gets `… 2.html`, and a message without a question falls back to
-  `antwort-2026-09-11-133827.html`.
+  `What is the capital of France?` becomes `What is the capital of France.html`;
+  a name clash gets `… 2.html`, and a message without a question falls back to a
+  timestamped name (`antwort-2026-09-11-133827.html`; `antwort` is the app's fixed fallback prefix).
 - Files land in `Documents/answers` (visible in the Files app under *GwenMobile*, the app has file
   sharing enabled) and the iOS share sheet opens in the same tap, so they can go to Files, Mail,
   Notes or AirDrop — and whichever of them you use, the sheet is gone again by itself once the file
@@ -41,19 +42,19 @@ Swift 6, strict concurrency, iOS 17+.
 *After launch (left) and the "+" menu with photo, camera and read-aloud (right).*
 
 ### Data graphics from the web
-- Ask in one sentence — "such im Internet nach den Einwohnerzahlen und stell sie als Diagramm dar",
+- Ask in one sentence — "look up the population figures online and chart them",
   "look up the latest unemployment rates and plot them" — and the app runs the whole chain:
   web search → page text → the chat model distils a **chart plan** (kind, title, unit, 2–8 label/value
   pairs) from **the fetched numbers only** → that plan becomes the prompt for the image model → the
   picture arrives in the chat with the data listed as text and the sources as clickable chips.
 - Two independent detection layers, so a chart wish is never missed and a plain question is never
   hijacked: `ChartIntent` decides deterministically on phrasing (needs an explicit chart word such as
-  *Diagramm/Grafik/Chart/plot* **plus** a data or research word, it honours rejections like
-  "kein Diagramm", "nur als Text", and `refersToExistingVisual` keeps it quiet when the chart word only
-  *points at* a graphic already on screen — "die du in dem Diagramm eingetragen hast", "woher hast du
-  die Zahlen für das Diagramm", "welche Werte hast du im Diagramm gezeigt" are questions answered in
-  text, while the same sentence that also asks to produce one ("mach das Diagramm neu mit den Werten
-  von 2025") still draws), and the chat model itself can answer with the protocol tokens
+  *chart/diagram/graph/plot* **plus** a data or research word, it honours rejections like
+  "no chart", "just text", and `refersToExistingVisual` keeps it quiet when the chart word only
+  *points at* a graphic already on screen — "the statistics you entered in the chart", "where did you get
+  the numbers for the chart", "which values did you show in the chart" are questions answered in
+  text, while the same sentence that also asks to produce one ("make the chart again with the 2025 numbers")
+  still draws), and the chat model itself can answer with the protocol tokens
   `[[CHART]]` or `[[SEARCH]][[CHART]]` for everything the phrase lists cannot see. If only the marker
   fires, no search is done and the numbers come from the model's own knowledge; the system prompt
   spells out that a question about an already shown picture — including where its numbers or sources
@@ -62,48 +63,57 @@ Swift 6, strict concurrency, iOS 17+.
   broken points are dropped, fewer than two usable numbers aborts with a hint instead of drawing fiction.
 
 ### Follow-ups understand the conversation
-- "Was sind die Hauptursachen der Klimaerwärmung?" → answer → **"und in Deutschland?"** works in every
+- "What are the main causes of global warming?" → answer → **"and in Germany?"** works in every
   flow, not just in plain chat. Before a web search or a chart is planned, `FollowUpResolver` decides
-  deterministically whether the message can stand alone (anaphora such as *und in / daraus / davon /
+  deterministically whether the message can stand alone (anaphora such as *and in / out of that / about it /
   what about / your answer*, or a bare fragment), and only then asks the model for one standalone
-  search query ("Hauptursachen der Klimaerwärmung in Deutschland"). That query is what
+  search query ("main causes of global warming in Germany"). That query is what
   `WebSearch.search`, `WebSearch.makeAnswerRequest` and `ChartPlanner` actually receive.
-- "mach daraus ein diagramm" after a researched answer: the previous answer plus its source list become
+- "make a chart out of that" after a researched answer: the previous answer plus its source list become
   the `## DATA` block, so the chart is drawn from the numbers the app just showed — not from the model's
   memory. Without any prior research the planner still falls back to the model's own knowledge, and a
   rewrite that is unusable (too short, a refusal, identical to the original) is discarded in favour of
   the user's own words.
-- **The last picture belongs to the memory.** `ConversationMemory` rebuilds what the model receives on
-  every turn: the last 30 messages, plus exactly one picture — your newest attachment or the newest
-  picture the app generated. "Warum ist der Himmel dort grau?" after a generated image and "und was ist
-  rechts auf dem Foto?" after a photo therefore reach the vision model *with that picture*, attached to
-  your new question. Older pictures are dropped so the request stays small, and a picture whose file
+- **Every picture of the chat stays in the memory.** `ConversationMemory` rebuilds what the model receives on
+  every turn: the last 30 messages plus the pictures of this conversation — your attachments and the pictures
+  the app generated, each file counted once, oldest first, capped at `ImagePolicy.maxPicturesPerRequest` so
+  one request cannot explode. When a chat holds more pictures than fit, the selection keeps **the very first
+  picture of the chat** and the newest ones after it, so "the first photo" always means the picture you sent
+  first. "Why is the sky grey there?" after a generated image and "and what is on the right of the
+  photo?" after a photo therefore reach the vision model *with that picture*. A picture whose file
   vanished is left out of the message and out of the byte list at the same time, so text and image can
   never drift apart.
+- **Any picture of the chat can be worked on.** Requests may address the pictures by position — "transfer
+  the colour from the second photo onto the first one", "give the third photo the colour of the first",
+  "make the object in photo 4 exactly as big as the one in photo 1", "take the background of the second
+  photo for the fourth" — or point at the photo attached to the request itself ("the photo I am sending you
+  now"). The numbering is spelled out twice so the model cannot guess: `memory_prompt` tells the chat model
+  that image 1 is the oldest of the selection and the last one the newest (and that a question without a
+  number means the newest), while `edit_frame_multi` tells the image model that the **first** image is the
+  one to edit and the rest are templates only.
 - **Pictures feed the diagram, not only the chat.** The diagram wish is decided before the image router, so
-  "stell die Werte aus dem Foto als Diagramm dar" or "mach daraus ein Liniendiagramm" now lands at
+  "plot the values from the photo as a chart" or "make a line chart out of it" now lands at
   `ChartPlanner` with the picture attached: the planner reads labels and numbers off the image, and the
   researched `## DATA` block still wins wherever both are present. Nothing is estimated — the chart shows
   what was on screen.
-- **Image wishes read the conversation.** "erzeuge ein Bild aus diesen Informationen", "male das nochmal
-  bei Nacht": `ImagePromptComposer` notices the reference and has the chat model turn the earlier answer
+- **Image wishes read the conversation.** "create a picture out of this information", "paint it again at
+  night": `ImagePromptComposer` notices the reference and has the chat model turn the earlier answer
   into one self-contained prompt before the image model is called, because that model never sees the chat.
   A request that already stands on its own costs no extra call, and a refusal or a plain echo of your
   words is discarded in favour of what you typed.
-- Rewrites and composed prompts are logged on device as `CTX rewrite frage=…→ frage=…` and
-  `CTX bild frage=…→ prompt=…` in `Documents/flow_trace.txt`.
+- Rewrites and composed prompts are logged on device as `CTX rewrite …` and `CTX bild …` lines in
+  `Documents/flow_trace.txt`.
 
 ### Images
 - Attach photos from camera or gallery; the vision model (e.g. qwen3.8-max) sees them
 - No switch, no toggle, no separate mode: what you type decides whether you get a
   picture. There is no image-AI on/off control anywhere in the UI.
-- **AI image generation**: ask in plain text — "Erzeuge ein Bild von …", "generate a
+- **AI image generation**: ask in plain text — "create a picture of …", "generate a
   picture of …", "draw a logo" — and the message goes to the image model
-  (e.g. wan2.7-image); when your wording points back at the conversation ("davon", "aus diesen
-  Informationen"), that conversation is folded into the prompt first. A message without attachments
-  becomes an image request as soon as it pairs a creation verb (erstelle, erzeuge, generiere, zeichne,
-  male, kreiere, create, generate, draw, make) with a picture noun (Bild, Abbild, Illustration, Foto,
-  picture, image, photo, logo, poster, wallpaper)
+  (e.g. wan2.7-image); when your wording points back at the conversation ("of that", "from this
+  information"), that conversation is folded into the prompt first. A message without attachments
+  becomes an image request as soon as it pairs a creation verb with a picture noun (the German and English
+  keyword lists live in `IntentHeuristics.imageCreation` and `IntentHeuristics.imageSubject`)
 - **AI image editing**: attach an image and describe the change
   ("make the mouse blue") — the image is edited in place, not regenerated
 - Smart intent router: every image + instruction is classified as
@@ -113,8 +123,24 @@ Swift 6, strict concurrency, iOS 17+.
   image model and everything else to chat.
   An explicit diagram wish is never hijacked by that router — it goes to the chart flow, with the picture as
   its data source
+- **Any picture can be worked on like that.** Because the memory carries the chat's pictures, a request may
+  address them by position or point at the photo attached to the request itself. The image model never
+  decides which picture to redraw: `PictureDirector` looks at the numbered pictures first (each one labelled
+  `BILD n`, the freshly attached ones marked *just sent by the user*), answers
+  `{"edit":n,"reference":n,"instruction":"…"}` and the app then sends **the target picture alone** to the
+  generator, with that instruction. The director is told which place each shown picture has inside the chat, so
+  counting from the first picture works even when a long chat dropped pictures out of the selection; if the
+  picture the request names is not among the shown ones it answers `{"edit":null}` and the app says so instead
+  of editing a random picture (`picture_out_of_memory`). The template deliberately does not travel with it: two
+  input images made the provider pick the wrong base now and then (measured on device — the template came back
+  edited although the target was listed first), so the director has to write the taken property down in exact
+  words instead ("the dark antracite grey of the template", "the object filling two thirds of the height", and
+  always the property of the named *object*, not of its background) plus what must stay untouched (its own
+  outline, shape, position, background). Only when the director cannot be understood does the request go out
+  with all pictures, where `edit_frame_multi` states that the first image is the target.
 - Follow-up edits: right after an image answer, just say "make it darker" —
-  the previous result is picked up as the input image, no re-attaching
+  the previous result is picked up as the input image, no re-attaching. Attach or pick up to four pictures
+  in one message (`+` → Photo) when you want to compare or merge them in a single run
 - **Tap any picture** — attached or generated — and the full-screen viewer opens it: pinch to zoom,
   double-tap to jump straight to the detail (double-tap again to fit), drag to pan while zoomed, and
   page through the other pictures of that message with the arrows at the bottom. The viewer decodes
@@ -125,22 +151,22 @@ Swift 6, strict concurrency, iOS 17+.
 
 ### Sharing pictures and saving answers
 - Long-press any picture in the chat — generated or attached — and choose
-  **„Per AirDrop senden"**: the system share sheet opens with AirDrop in the front row, so the
+  **“Send via AirDrop”**: the system share sheet opens with AirDrop in the front row, so the
   image goes straight to another Mac, iPhone or iPad without first saving it to the photo library
-  (the sheet also offers Messages, Mail, Notes, „In Dateien sichern" and printing).
+  (the sheet also offers Messages, Mail, Notes, “Save to Files” and printing).
 - What is handed over is the stored JPEG file itself, not a re-encoded thumbnail, so the
   receiver gets the same bytes the app shows. If the file has been cleaned away in the meantime,
   the app says so instead of sharing an empty attachment.
 - Every share flow runs through the same closer, so the chat is in front again by itself: a picture
   to AirDrop, an answer saved as a file and a hand-over to WhatsApp, Mail, Notes, printing or
-  „In Dateien sichern" all tear the whole share presentation down — the sheet, plus whatever window
+  “Save to Files” all tear the whole share presentation down — the sheet, plus whatever window
   the sheet opened above it.
 - The instant the picture is handed over to AirDrop that happens. The transfer itself keeps running
   in the system: the file still arrives on the Mac although the app already shows the chat. iOS never
   reports an AirDrop delivery to the app (`completionWithItemsHandler` stays silent, measured on
   device), so the hand-over event of the activity item source is what closes the windows — no timer,
   no time window.
-- Activities that keep their own picker inside the app („In Dateien sichern", Mail, Notes, printing)
+- Activities that keep their own picker inside the app (“Save to Files”, Mail, Notes, printing)
   must not be torn down while you are still choosing, so they close the sheet as soon as the system
   reports that activity back.
 - Share extensions that switch to another app first — WhatsApp and friends — leave the sheet
@@ -150,18 +176,18 @@ Swift 6, strict concurrency, iOS 17+.
 - A sheet the system already tore down is never dismissed twice, and one share never closes twice.
 
 ### Histories and storage
-- The header's list button opens "Verläufe": every conversation with its date, message
+- The header's list button opens "Histories": every conversation with its date, message
   and image count and its size on disk. Tap to open, swipe to delete one.
-- Long-press any message → "Nachricht löschen" removes exactly that message.
-- "Alle Verläufe löschen" (in the history sheet or in Settings → Speicher) removes every
+- Long-press any message → "Delete message" removes exactly that message.
+- "Delete all histories" (in the history sheet or in Settings → Storage) removes every
   conversation, the one you are reading included, and immediately opens a fresh empty chat.
   The confirm dialog names the counts and the megabytes before anything happens, and
-  "Rückgängig" puts all chats back in their old order with the one you were reading open again.
-- Deleted pictures are moved to `Documents/.trash` first, so the snackbar's "Rückgängig" restores the
+  "Undo" puts all chats back in their old order with the one you were reading open again.
+- Deleted pictures are moved to `Documents/.trash` first, so the snackbar's "Undo" restores the
   conversation and the files. The snackbar times itself out after 5 s (`HistoryCleaner.defaultUndoWindow`)
   and the trash is emptied at that moment; anything still pending is erased on the next app start.
 - A picture file is only freed when no remaining message references it any more.
-- Settings → Speicher shows the same numbers (images, histories) at a glance.
+- Settings → Storage shows the same numbers (images, histories) at a glance.
 
 ### Calendar control
 - Create, change or delete appointments from chat:
@@ -173,14 +199,14 @@ Swift 6, strict concurrency, iOS 17+.
   "remove the reminders")
 - Relative dates ("tomorrow", "next Monday") are resolved against the device clock
 - **Private or work**: "make the dentist appointment private", "book that in my work calendar",
-  "leg den Termin privat an" — the app maps that onto the calendars that actually exist on your
-  iPhone (Privat/Arbeit, Private/Work, Persönlich, Zu Hause, Home/Homeoffice, …). Saying nothing
+  "book the appointment privately" — the app maps that onto the calendars that actually exist on your
+  iPhone (Private, Work, Personal, Home, Homeoffice, …). Saying nothing
   files a new appointment in the **work** calendar, and an existing appointment keeps its calendar
   unless you ask to move it
 - "set the calendar to private" on an appointment that already exists moves it there
-- A calendar wish never ends up as a note: if the router files "privat" into the note field anyway,
+- A calendar wish never ends up as a note: if the router files `privat` into the note field anyway,
   the app moves it into the calendar choice and drops the note — including a leftover note like
-  "privat" from an older appointment, which is cleaned up while moving it
+  `privat` from an older appointment, which is cleaned up while moving it
 - A calendar you named that does not exist is reported instead of guessed, and the answer lists
   the calendars you have
 - Asks for calendar permission on first use
@@ -271,16 +297,16 @@ xcodebuild test -scheme GwenMobile -destination 'platform=iOS Simulator,name=iPh
 ### Vision models that actually see
 - Long-pressing the vision picker used to offer every text model of the account, and that is wrong:
   `deepseek-v4-pro`, `deepseek-v4-flash-0731` and `glm-5.2` **accept** an image part without complaining
-  and simply never look at it. Measured with a 24×24 px solid-colour PNG and the question „Nenne die
-  Farbe des Bildes mit genau einem Wort“: green picture → „Schwarz“ (glm-5.2), „Türkis“
-  (deepseek-v4-pro), „Weiß“ (deepseek-v4-flash-0731) — and the same answer or a shrug for the magenta
+  and simply never look at it. Measured with a 24×24 px solid-colour PNG and a one-word "what colour is this
+  picture?" question: green picture → "black" (glm-5.2), "turquoise"
+  (deepseek-v4-pro), "white" (deepseek-v4-flash-0731) — and the same answer or a shrug for the magenta
   picture. Their `usage.prompt_tokens` doesn't even grow when the picture is attached (18 vs 19,
   17 vs 10), i.e. zero image tokens were taken in. `qwen3.7-max` is stricter and refuses the request:
-  400 „The provided messages input is invalid. The error info is [Unexpected item type in content.]“.
+  400 "The provided messages input is invalid. The error info is [Unexpected item type in content.]".
 - The detection therefore asks the provider instead of reading model names: one tiny request per text
   model with that picture attached, and the answer's `usage.prompt_tokens_details.image_tokens` decides.
   Measured on the account: **qwen3.8-flash, qwen3.8-max, qwen3.7-plus and qwen3.6-flash report 66 image
-  tokens and name the colour correctly („Grün“, „Magenta“)** → `supported`; the blind ones report no
+  tokens and name the colour correctly ("green", "magenta")** → `supported`; the blind ones report no
   `image_tokens` → `rejected`; `qwen3.7-max` answers 400 → `rejected`; a 500, a timeout or a missing
   answer stays `unknown` and hides nothing (a broken network must not remove working models from the list).
 - Consequences in the UI: the vision picker offers only `supported` models, the section footer states
@@ -292,7 +318,7 @@ xcodebuild test -scheme GwenMobile -destination 'platform=iOS Simulator,name=iPh
 - Every Qwen chat model on the account endpoint reasons before it answers, and it does so **without any
   limit** unless the app says otherwise: the same arithmetic task ran **355 s / 61 556 characters** of
   reasoning when nothing was sent, and **11,9 s** with the thinking switched off. Settings →
-  **Denktiefe / Thinking depth** is the dial for that.
+  **Thinking depth** is the dial for that.
 - The app does not guess which levels exist. `GET /models` answers with `id`, `created`, `object` and
   `owned_by` only — no capability field, and there is no model-detail endpoint — so the levels are
   **probed** while the model list loads: a request with an impossible `reasoning_effort` is rejected
@@ -301,24 +327,24 @@ xcodebuild test -scheme GwenMobile -destination 'platform=iOS Simulator,name=iPh
   deepseek-v4, while deepseek-v4-pro has no `none`/`minimal` at all). A second token-free probe tries
   `enable_thinking: false` and only marks a model switchable when the answer really comes without a
   reasoning block.
-- The picker therefore shows exactly the levels of the selected chat model, always plus *Standard des
-  Modells* (send nothing). Until a model has been probed the list is limited to the four levels every
-  account model was measured to accept (`Sparsam`…`Sehr gründlich`), which keeps the setting useful on a
+- The picker therefore shows exactly the levels of the selected chat model, always plus *Model default*
+  (send nothing). Until a model has been probed the list is limited to the four levels every
+  account model was measured to accept (`Low` … `Extra high`), which keeps the setting useful on a
   fresh install without risking a rejected request.
 - One choice, one key: the provider rejects `reasoning_effort` and `thinking_budget` in the same body
   ("cannot be set simultaneously") and demands `reasoning_effort: none` whenever
   `enable_thinking: false`, so the app builds the body from a single directive that can never emit two
   thinking keys — covered by `ThinkingLevelTests.testNeverBothThinkingKeysInOneBody`.
-- Models that expose no thinking control at all (image generation, audio) simply keep *Standard des
-  Modells*; nothing is hidden and nothing is promised. Those models cannot be picked for vision either
+- Models that expose no thinking control at all (image generation, audio) simply keep *Model default*;
+  nothing is hidden and nothing is promised. Those models cannot be picked for vision either
   (see *Vision models that actually see*).
 - Every internal helper request the app fires beside the answer — image-route classification, follow-up
   rewriting, image-prompt composition, calendar planning, chart planning — runs with thinking off,
   because each of them expects a single word or one JSON object (measured 1,6 s instead of 10,7 s on
   qwen3.7-max). The chosen depth applies to the visible answer only.
 - The bubble signature under an answer shows the depth that produced it
-  (`qwen3.8-flash · 26,9 s · Ausgewogen`) and is stored with the message, so a re-read chat still tells
-  you how each answer was made. A *Standard des Modells* turn shows no depth at all.
+  (`qwen3.8-flash · 26.9 s · Medium`) and is stored with the message, so a re-read chat still tells
+  you how each answer was made. A *Model default* turn shows no depth at all.
 
 ### Debug-only feature sweep
 `sweep` runs every backend feature once against the real account and writes a report to
@@ -343,7 +369,7 @@ chat UI on the device (perf regressions for typing, scrolling and image edit).
 Scenarios: `typetest`, `scrolltest`, `camtypetest`, `camflow`, `followup`,
 `tripleedit`, `bigedit`, `reopenbig`, `editbig`, `camtrans`, `chartprobe` (real web search,
 follow-up rewrite and chart generation, report in `Documents/chart_probe.txt`) and
-`searchonce` (one researched answer, then asserts the "Ich suche im Internet" capsule is gone —
+`searchonce` (one researched answer, then asserts the "Searching the web" capsule is gone —
 report in `Documents/search_once.txt`, `kapsel=nil` is the passing state) and `exportprobe`
 (real answer, then the rendered export: file name, `<strong>`/`<p>`/`<a href>` counts and whether any
 raw `**` survived — report in `Documents/export_probe.txt`) and `airdropprobe`
@@ -358,11 +384,22 @@ the second one — into `Documents/viewer_probe.txt`, plus `viewer_probe_fit.jpg
 `viewer_probe_zoom.jpg` grabbed from the live window), `capsprobe` (probes every text
 model of the account the way the settings screen does — thinking levels, switchability and whether the
 model really takes in a picture — and writes one line per model plus the resulting vision list to
-`Documents/model_caps_probe.txt`), `chartguard` (real conversation:
-answer → "mach daraus ein diagramm" → then the three follow-ups "woher hast du die Statistik, die du in
-dem Diagramm eingetragen hast", "welche Werte hast du im Diagramm eingetragen" and the positive control
-"mach das diagramm bitte neu mit den werten von 2025" — passing is `bilder=0` for the two questions and
-`bilder=1` for the control, report in `Documents/chart_guard.txt`), plus a bare
+`Documents/model_caps_probe.txt`), `chartguard` (real conversation: an answer, then the diagram request,
+then the two follow-ups that only ask about the chart already on screen — where its statistics and its
+values came from — and the positive control that asks to redraw the chart with the 2025 numbers; passing is
+`bilder=0` for the two questions and
+`bilder=1` for the control, report in `Documents/chart_guard.txt`), `picsweep` (the real picture matrix
+against the real account: five probe pictures (distinct shape, object colour and background, drawn by the
+probe itself into `Documents/images/` so no external file can be cleaned away) are posted into one fresh
+chat, then each case runs
+through the normal send path — colour transfer both ways, the photo that is attached to the request itself,
+"make the object of photo 4 exactly as big as the one in photo 1", background transfer, the picture-budget
+overflow, plus the negative control "what do you see on the first photo?" which must not produce a picture.
+Every case is graded by two further vision calls over the finished JPEG (`form_ok`, `farbe_ok`,
+`fremde_formen_ok` — the last one fails when an object of another picture leaked into the result) and by the
+mean RGB and edge length measured on the device,
+`Documents/picture_sweep.txt` holds one line per case and the
+`flow` log holds the `BILDZIEL` line with the target and the template of every director decision, plus a bare
 `gwenmobile://test/<attachment-file-name>` for a single image. They assume the conversations and image files of the reference
 device exist in the app sandbox (`img_0B85747A-BAA.jpg`, `img_7924D952-6BF.jpg`) and
 log to the `flow` os-log subsystem. Release builds contain none of this code
@@ -394,8 +431,8 @@ python3 -m pymobiledevice3 apps pull com.mortis.gwenmobile Documents/flow_trace.
   (generation/editing), qwen-audio-3.0-realtime-plus (ASR + English TTS).
   Exact names must exist in your account — check via GET /models; API errors
   are surfaced in the app's error dialogs.
-- Image editing is framed with an explicit "edit only, keep composition"
-  instruction so the model edits your photo instead of generating a new one.
+- Image editing is framed with an explicit "edit only, keep composition" instruction (and, for several
+  pictures, "the first image is the target") so the model edits your photo instead of generating a new one.
 - All API errors run through one translator: a short message in the app
   language (invalid/expired key, unknown model — named —, rate limit, offline)
   plus the raw code as a small detail line; key/model errors add an

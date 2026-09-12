@@ -136,6 +136,19 @@ final class RequestBuildingTests: XCTestCase {
         XCTAssertTrue(text.hasPrefix(String(L.t("edit_frame").prefix(20))))
     }
 
+    func testImageRequestWithSeveralPicturesUsesTheOrderedCompositionFrame() throws {
+        let req = try QwenAPI.makeImageRequest(baseURL: baseURL, key: "k", model: "wan2.7-image",
+                                              prompt: "übertrage die farbe", inputImages: [tinyJPEG, tinyJPEG],
+                                              isEdit: true)
+        let content = (messages(req).first ?? [:])["content"] as? [[String: Any]] ?? []
+        XCTAssertEqual(content.count, 3)
+        XCTAssertEqual(content.first?["image"] as? String,
+                       "data:image/jpeg;base64,\(tinyJPEG.base64EncodedString())")
+        let text = content.last?["text"] as? String ?? ""
+        XCTAssertTrue(text.hasPrefix(String(L.t("edit_frame_multi").prefix(20))))
+        XCTAssertTrue(text.contains("übertrage die farbe"))
+    }
+
     func testImageRequestWithoutInputImagesSendsPlainText() throws {
         let req = try QwenAPI.makeImageRequest(baseURL: baseURL, key: "k", model: "m",
                                               prompt: "eine katze", inputImages: [], isEdit: false)

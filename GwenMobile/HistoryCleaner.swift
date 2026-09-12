@@ -122,7 +122,6 @@ final class HistoryCleaner: ObservableObject {
     }
 
     private func unreferencedVictims(of messages: [ChatMessage]) -> [String] {
-        let candidates = Set(messages.flatMap { $0.images.map(\.file) + ($0.outImages ?? []).map(\.file) })
-        return Array(candidates.subtracting(store.referencedFiles))
+        Array(Set(messages.flatMap(\.imageFiles)).subtracting(store.referencedFiles))
     }
 }

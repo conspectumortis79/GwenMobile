@@ -51,6 +51,20 @@ final class SendRouterTests: XCTestCase {
         XCTAssertEqual(SendRouter.route(text: "leg einen termin morgen an", context: attached(.chat)), .chat)
     }
 
+    func testCreateIntentForARememberedPictureStillEditsWordsThatDescribeAnEdit() {
+        XCTAssertEqual(SendRouter.route(text: "mache den gegenstand aus dem vierten foto so groß wie den aus dem ersten",
+                                        context: remembered(.create)), .imageEdit)
+        XCTAssertEqual(SendRouter.route(text: "erzeuge ein poster von einem drachen",
+                                        context: remembered(.create)), .imageCreate)
+    }
+
+    func testACreationWordWithAnEditMeaningStillEditsTheRememberedPicture() {
+        XCTAssertEqual(SendRouter.route(text: "Nimm die Farbe vom vierten Bild und male das erste Bild damit an.",
+                                        context: remembered(nil)), .imageEdit)
+        XCTAssertEqual(SendRouter.route(text: "male ein bild von einem sonnenuntergang",
+                                        context: remembered(nil)), .imageCreate)
+    }
+
     func testIntentIsIgnoredWhenDetectionDidNotRun() {
         XCTAssertEqual(SendRouter.route(text: "extrahiere den text", context: SendContext()), .chat)
     }

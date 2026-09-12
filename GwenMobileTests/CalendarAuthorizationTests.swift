@@ -4,7 +4,7 @@ import EventKit
 
 final class CalendarAuthorizationTests: XCTestCase {
     func testDeprecatedAuthorizedStatusIsTheSameValueAsFullAccess() {
-        XCTAssertEqual(EKAuthorizationStatus.authorized.rawValue, EKAuthorizationStatus.fullAccess.rawValue)
+        XCTAssertEqual(EKAuthorizationStatus(rawValue: 3), EKAuthorizationStatus.fullAccess)
     }
 
     func testDeniedAndRestrictedAreNotFullAccess() {

@@ -75,7 +75,7 @@ final class StorageTests: XCTestCase {
         let media = makeMedia()
         media.prepareDirectories()
         let name = try XCTUnwrap(media.storeImageData(Data([1, 1])))
-        media.moveImagesToTrash([name])
+        _ = media.moveImagesToTrash([name])
         media.emptyTrash()
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: media.paths.trash.path).isEmpty, true)
     }
