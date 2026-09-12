@@ -9,6 +9,17 @@ enum PictureDirection: Equatable, Sendable {
         return [images[target - 1]]
     }
 
+    var sentNumbers: Set<Int> {
+        switch self {
+        case .edit(let target, let reference, _):
+            var numbers = [target]
+            if let reference { numbers.append(reference) }
+            return Set(numbers)
+        case .unreachable:
+            return []
+        }
+    }
+
     var trace: String {
         switch self {
         case .edit(let target, let reference, let instruction):
@@ -26,12 +37,18 @@ enum PictureDirector {
         Decide which single picture the request wants changed. Weigh the user's wording against the chat places above: when the picture the user names is not among the shown ones, answer {"edit":null} and nothing else.
         Reply with ONLY one JSON object: {"edit":n,"reference":n,"instruction":"..."}
         "edit" is the number of the picture to change, "reference" the number of the template picture or null when none is needed, and "instruction" the change written for the picture named in "edit".
+        Every BILD label also carries its place inside the chat in brackets. An ordinal in the user's request ("das dritte Foto", "the second picture") counts the pictures of the whole chat, so resolve it to the picture whose label shows that chat place, never to the BILD number.
         In "instruction" never use picture numbers: call the picture to change "the target image" and the template "the template", keep the language of the user's request, and write the instruction so complete that the generation model does not need the template in front of it: name the taken property in exact concrete words (the dark antracite grey of the template, the mustard yellow of its star, the object filling about two thirds of the height), name the property of the *object* that is named rather than the picture's background, and say what must stay exactly as it is in the target image — its own outline, its own shape, its position and its background, unless the request changes them.
+        When the request is about size, write the taken size as a share of the canvas measured on the template ("the object spans about 62 % of the canvas height") and never name, describe or copy the template's outline, shape, colour or background into the target: only the size of the target's own object changes.
+        The program may append a line starting with "HINWEIS DES PROGRAMMS" that maps the chat places the user's ordinals name onto BILD numbers; treat that mapping as authoritative.
         """
     }
 
-    static func label(number: Int, fresh: [Int]) -> String {
-        fresh.contains(number) ? "BILD \(number) (just sent by the user)" : "BILD \(number)"
+    static func label(number: Int, shown: [Int] = [], fresh: [Int] = []) -> String {
+        var text = "BILD \(number)"
+        if shown.indices.contains(number - 1) { text += " (chat position \(shown[number - 1]))" }
+        if fresh.contains(number) { text += " (just sent by the user)" }
+        return text
     }
 
     static func request(baseURL: String, key: String, model: String, instruction: String,
@@ -45,7 +62,7 @@ enum PictureDirector {
         ]]
         for (index, picture) in pictures.enumerated() {
             let number = index + 1
-            parts.append(["type": "text", "text": label(number: number, fresh: fresh)])
+            parts.append(["type": "text", "text": label(number: number, shown: shown, fresh: fresh)])
             parts.append(["type": "image_url", "image_url": ["url": QwenAPI.dataURL(picture)]])
         }
         var body: [String: Any] = [
@@ -83,6 +100,34 @@ enum PictureDirector {
     static func observe(baseURL: String, key: String, model: String, instruction: String,
                         pictures: [Data], shown: [Int] = [], total: Int = 0, fresh: [Int] = [],
                         thinking: ThinkingDirective = .nothing) async -> PictureDirection? {
+        let placesOfShown = shown.isEmpty ? Array(1...max(1, pictures.count)) : shown
+        let places = PictureOrdinals.places(in: instruction, total: max(total, placesOfShown.count))
+        guard !PictureOrdinals.outOfSelection(places: places, shown: placesOfShown) else {
+            flowMark("BILDZIEL ausserhalb plaetze=\(places) gezeigt=\(placesOfShown)")
+            return .unreachable
+        }
+        let soft = PictureOrdinals.hint(places: places, shown: placesOfShown)
+        let strict = PictureOrdinals.hint(places: places, shown: placesOfShown, binding: true)
+        let wanted = places.count >= 2 ? Set(PictureOrdinals.numbers(of: places, shown: placesOfShown)) : nil
+        for attempt in 1...2 {
+            let text = instruction + (attempt == 1 ? (soft ?? "") : (strict ?? ""))
+            guard let direction = await decide(baseURL: baseURL, key: key, model: model,
+                                               instruction: text, pictures: pictures,
+                                               shown: placesOfShown, total: total, fresh: fresh,
+                                               thinking: thinking) else { return nil }
+            if attempt == 1, let wanted, direction.sentNumbers != wanted {
+                flowMark("BILDZIEL korrektur erwartet=\(wanted.sorted()) erhalten=\(direction.sentNumbers.sorted())")
+                continue
+            }
+            flowMark("BILDZIEL \(direction.trace)")
+            return direction
+        }
+        return nil
+    }
+
+    private static func decide(baseURL: String, key: String, model: String, instruction: String,
+                               pictures: [Data], shown: [Int], total: Int, fresh: [Int],
+                               thinking: ThinkingDirective) async -> PictureDirection? {
         let raw = try? await Offload.run {
             let probe = try PictureDirector.request(baseURL: baseURL, key: key, model: model,
                                                     instruction: instruction, pictures: pictures, shown: shown,
@@ -95,7 +140,6 @@ enum PictureDirector {
                      + raw.replacingOccurrences(of: "\n", with: " ").prefix(120))
             return nil
         }
-        flowMark("BILDZIEL \(direction.trace)")
         return direction
     }
 }

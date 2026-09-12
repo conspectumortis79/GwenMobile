@@ -20,6 +20,8 @@ enum DebugFeatureProbe {
         case "ttsp": await ttsPlayback(view)
         case "micloop": await micLoop(view)
         case "calwrite": await calendarWrite(view)
+        case "webchart": await webChart(view)
+        case "tlsretry": await tlsRetry(view)
         default: return false
         }
         return true
@@ -51,6 +53,51 @@ enum DebugFeatureProbe {
                    + "text=\(heard.text.map { oneLine($0) } ?? "keiner")")
         report.write(into: "mic_loop.txt")
         flowLog.info("MIKLOOP fertig")
+    }
+
+    private static func tlsRetry(_ view: ChatView) async {
+        var report = SweepReport()
+        for (name, base) in [("zertifikat_abgelaufen", "https://expired.badssl.com/compatible-mode/v1"),
+                             ("host_unbekannt", "https://gwenmobile-nicht-vorhanden.invalid/v1")] {
+            let started = ContinuousClock.now
+            var chunks = 0
+            do {
+                let req = try QwenAPI.makeRequest(baseURL: base, key: "sk-test",
+                                                  model: "qwen3.8-flash",
+                                                  messages: [ChatMessage(role: .user, text: "x")],
+                                                  imageData: [])
+                for try await chunk in QwenAPI.streamText(req: req) {
+                    chunks += chunk.count
+                }
+                report.add("TLSRETRY_\(name)", "durchgekommen=ja zeichen=\(chunks) "
+                           + "ms=\(msOf(started.duration(to: .now)))")
+            } catch {
+                report.add("TLSRETRY_\(name)", "zeichen=\(chunks) ms=\(msOf(started.duration(to: .now))) "
+                           + "code=\((error as NSError).code) text=\(String(error.localizedDescription.prefix(70)))")
+            }
+        }
+        report.write(into: "tls_retry.txt")
+        flowLog.info("TLSRETRY fertig")
+    }
+
+    private static func webChart(_ view: ChatView) async {
+        var report = SweepReport()
+        view.store.newConversation()
+        view.input = "Such im Internet nach dem Stromverbrauch in Deutschland "
+            + "und stell die Werte als Diagramm dar"
+        let t0 = ContinuousClock.now
+        await view.send()
+        let answer = view.store.current?.messages.last(where: { $0.role == .assistant })
+        report.add("WEBDIAGRAMM", "ms=\(msOf(t0.duration(to: .now))) bilder=\(answer?.outImages?.count ?? -1) "
+                   + "punkte=\(pointLines(answer?.text ?? "")) quellen=\(answer?.sources?.count ?? -1) "
+                   + "text=\(oneLine(answer?.text ?? ""))")
+        report.add("WEBDIAGRAMM_KAPSEL", "danach=\(view.webStatus ?? "nil")")
+        report.write(into: "web_chart.txt")
+        flowLog.info("WEBDIAGRAMM fertig")
+    }
+
+    private static func pointLines(_ text: String) -> Int {
+        text.components(separatedBy: "\n").filter { $0.hasPrefix("- ") }.count
     }
 
     private static func calendarWrite(_ view: ChatView) async {

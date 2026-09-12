@@ -70,10 +70,14 @@ enum HTTP {
     ]
     static let connectionRetryBackoff = Duration.milliseconds(1200)
 
+    static func isConnectionReset(_ error: URLError) -> Bool {
+        connectionRetryCodes.contains(error.code)
+    }
+
     static func data(_ req: URLRequest, using connection: URLSession = session) async throws -> (Data, URLResponse) {
         do {
             return try await connection.data(for: req)
-        } catch let error as URLError where connectionRetryCodes.contains(error.code) {
+        } catch let error as URLError where isConnectionReset(error) {
             try await Task.sleep(for: connectionRetryBackoff)
             return try await connection.data(for: req)
         }

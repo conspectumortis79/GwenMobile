@@ -270,48 +270,96 @@ enum QwenAPI {
         return CalendarPlanRefiner.refine(decoded, instruction: instruction)
     }
 
+    private typealias Continuation = AsyncThrowingStream<String, Error>.Continuation
+
+    private enum StreamOutcome {
+        case finished
+        case aborted
+        case resetBeforeFirstByte(String)
+        case failed(APIError)
+    }
+
     static func streamText(req: URLRequest) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             let task = Task.detached(priority: .userInitiated) {
-                do {
-                    let (bytes, response) = try await HTTP.session.bytes(for: req)
-                    if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
-                        var body = ""
-                        for try await line in bytes.lines {
-                            body += line
-                            if body.count > 2000 { break }
+                var retries = 0
+                while true {
+                    switch await streamPass(req: req, into: continuation) {
+                    case .finished:
+                        continuation.finish()
+                        return
+                    case .aborted:
+                        continuation.finish(throwing: nil)
+                        return
+                    case .failed(let error):
+                        continuation.finish(throwing: error)
+                        return
+                    case .resetBeforeFirstByte(let message):
+                        guard retries == 0 else {
+                            continuation.finish(throwing: APIError(message: message))
+                            return
                         }
-                        throw APIError(message: APIErrorParser.message(from: body, status: http.statusCode),
-                                       status: http.statusCode)
+                        retries += 1
+                        try? await Task.sleep(for: HTTP.connectionRetryBackoff)
                     }
-                    var sawData = false
-                    for try await line in bytes.lines {
-                        guard line.hasPrefix("data:") else { continue }
-                        sawData = true
-                        let payload = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
-                        if payload == "[DONE]" { break }
-                        guard let data = payload.data(using: .utf8) else { continue }
-                        if let obj = try? JSONDecoder().decode(ChatResponse.self, from: data),
-                           let delta = obj.streamChunk, !delta.isEmpty {
-                            continuation.yield(delta)
-                        }
-                    }
-                    if !sawData {
-                        throw APIError(message: L.t("no_sse"))
-                    }
-                    continuation.finish()
-                } catch let e as APIError {
-                    continuation.finish(throwing: e)
-                } catch is CancellationError {
-                    continuation.finish(throwing: nil)
-                } catch let e as URLError where e.code == .cancelled {
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: APIError(message: error.localizedDescription))
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    private static func streamPass(req: URLRequest, into continuation: Continuation) async -> StreamOutcome {
+        let bytes: URLSession.AsyncBytes
+        let response: URLResponse
+        do {
+            (bytes, response) = try await HTTP.session.bytes(for: req)
+        } catch {
+            return outcome(of: error, sawData: false)
+        }
+        var sawData = false
+        do {
+            if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+                var body = ""
+                for try await line in bytes.lines {
+                    body += line
+                    if body.count > 2000 { break }
+                }
+                throw APIError(message: APIErrorParser.message(from: body, status: http.statusCode),
+                               status: http.statusCode)
+            }
+            for try await line in bytes.lines {
+                guard line.hasPrefix("data:") else { continue }
+                sawData = true
+                let payload = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+                if payload == "[DONE]" { break }
+                guard let data = payload.data(using: .utf8) else { continue }
+                if let obj = try? JSONDecoder().decode(ChatResponse.self, from: data),
+                   let delta = obj.streamChunk, !delta.isEmpty {
+                    continuation.yield(delta)
+                }
+            }
+            guard sawData else { throw APIError(message: L.t("no_sse")) }
+            return .finished
+        } catch {
+            return outcome(of: error, sawData: sawData)
+        }
+    }
+
+    static func streamReset(of error: Error, sawData: Bool) -> Bool {
+        guard !sawData, let urlError = error as? URLError else { return false }
+        return urlError.code != .cancelled && HTTP.isConnectionReset(urlError)
+    }
+
+    private static func outcome(of error: Error, sawData: Bool) -> StreamOutcome {
+        if error is CancellationError { return .aborted }
+        if let urlError = error as? URLError {
+            if urlError.code == .cancelled { return .finished }
+            if streamReset(of: error, sawData: sawData) {
+                return .resetBeforeFirstByte(urlError.localizedDescription)
+            }
+        }
+        if let apiError = error as? APIError { return .failed(apiError) }
+        return .failed(APIError(message: error.localizedDescription))
     }
 }
 

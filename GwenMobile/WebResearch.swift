@@ -18,10 +18,11 @@ struct WebResearch {
     }
 
     static func dataDigest(from hits: [WebHit], limit: Int = ChartPlanner.maxDataChars) -> String {
+        guard !hits.isEmpty else { return "" }
+        let share = max(1, (limit + hits.count - 1) / hits.count)
         var digest = ""
         for (index, hit) in hits.enumerated() {
-            digest += hit.sourceBlock(numbered: index + 1)
-            if digest.count >= limit { break }
+            digest += String(hit.sourceBlock(numbered: index + 1).prefix(share))
         }
         return String(digest.prefix(limit))
     }
