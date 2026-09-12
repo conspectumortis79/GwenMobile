@@ -10,7 +10,14 @@ Swift 6, strict concurrency, iOS 17+.
   while the tokens arrive, not only once the answer is finished
 - Compact input bar: a "+" menu holds camera, photo and read-aloud (with visible
   ON/OFF state) — camera first, because the photo is only the fallback when you cannot aim;
-  mic and send stay one tap away, so the text field is roughly twice as wide
+  mic and send stay one tap away, so the text field is roughly twice as wide.
+  All four round controls (+, mic, send/stop) are the same 34 × 34 pt circle, and while a dictation
+  is running the send button turns into the stop control for it (see *Voice*)
+- How much the model reasons before it answers is a setting, not a guess: Settings →
+  **Thinking depth** (*Denktiefe*) offers exactly the levels your provider confirms for the chat model,
+  from *Model default* (send nothing) down to *Off — fastest answer* — measured 11,9 s against 355 s
+  on the same task. Every helper call the app fires beside the answer runs with thinking off, and the
+  bubble signature shows which depth produced an answer (see *Thinking depth*)
 - Multiple conversations, persisted locally (JSON + images in the app sandbox)
 - Every request is sent in context: the conversation (its last 30 turns) plus the pictures it holds —
   attachments and AI-generated ones, newest last — so follow-up questions, diagrams, colour transfers and
@@ -61,6 +68,10 @@ Swift 6, strict concurrency, iOS 17+.
   come from — is answered in text, never with a token.
 - The plan is validated, not trusted: values survive `1,5`, `1.234,56`, `1,234.56`, `42 %` and `12,345`,
   broken points are dropped, fewer than two usable numbers aborts with a hint instead of drawing fiction.
+  Every fetched page contributes to the `## DATA` block instead of the budget running out after the first
+  two (`WebResearch.dataDigest` splits the limit per source), an unusable plan is asked for a second time,
+  and the raw answer of both attempts lands in `Documents/flow_trace.txt` as `CHARTPLAN unbrauchbar …`
+  so a refusal can be traced to the sources that caused it.
 
 ### Follow-ups understand the conversation
 - "What are the main causes of global warming?" → answer → **"and in Germany?"** works in every
@@ -131,7 +142,17 @@ Swift 6, strict concurrency, iOS 17+.
   generator, with that instruction. The director is told which place each shown picture has inside the chat, so
   counting from the first picture works even when a long chat dropped pictures out of the selection; if the
   picture the request names is not among the shown ones it answers `{"edit":null}` and the app says so instead
-  of editing a random picture (`picture_out_of_memory`). The template deliberately does not travel with it: two
+  of editing a random picture (`picture_out_of_memory`).
+  **The counting itself is no longer left to the model.** `PictureOrdinals` reads the ordinals of the request
+  ("das dritte Foto", "the second picture", "photo 2"), maps them onto the chat places and hands the director
+  an authoritative line with the result (`HINWEIS DES PROGRAMMS: Chat-Platz 3 = BILD 2`); the answer is then
+  checked against that mapping and the director is asked a second time when it named other numbers. Measured
+  before this existed: in a chat whose picture budget had dropped one picture, "die Farbe des dritten Fotos"
+  was taken as the third *shown* picture and the target came back in the wrong colour (`farbe_ok=false`).
+  A size wish is written as a share of the canvas ("the object spans about 62 % of the canvas height") and
+  the director may not name the template's outline, shape or colour in the instruction — the generator
+  otherwise draws the template's object next to the target's (`fremde_formen_ok`).
+  The template deliberately does not travel with it: two
   input images made the provider pick the wrong base now and then (measured on device — the template came back
   edited although the target was listed first), so the director has to write the taken property down in exact
   words instead ("the dark antracite grey of the template", "the object filling two thirds of the height", and
@@ -216,6 +237,13 @@ Swift 6, strict concurrency, iOS 17+.
 
 ### Voice
 - Voice input (ASR): the mic button records, transcribes and sends in one step
+- **Abort a dictation**: while the mic is recording — or while the recording is being transcribed — the
+  send button on the right shows a stop square instead of the arrow. One tap discards the dictation:
+  nothing is sent to the model, no message appears in the chat, and an attached picture stays in the
+  input bar so it can be dictated again. A transcript that arrives *after* the abort is dropped as well
+  (`VoiceTranscriber.cancel()` bumps a session counter the running hand-over is checked against), the
+  temporary recording file is deleted and the countdown stops. Once the dictation is through — sent or
+  discarded — the button is the normal send control again
 - Read-aloud of answers (TTS), toggleable per chat
 - German: uses the iOS system voice — the cloud audio model's German TTS is not
   good enough yet (its voices are Chinese/English only), so read-aloud falls
@@ -244,7 +272,8 @@ wake word in the background, so you bind the URL to a physical button once:
    shortcut.
 3. Use it: press the Action button once → GwenMobile opens and records right
    away (orange mic dot in the status bar). Speak, then tap the red mic to
-   send. Recording stops and transcribes automatically after 28 s (the ASR
+   send — or tap the stop button next to it to throw the dictation away.
+   Recording stops and transcribes automatically after 28 s (the ASR
    server rejects longer audio) — a countdown appears over the input bar in
    the last 10 s.
 
@@ -257,8 +286,9 @@ the mic button in the app.
 - Model pickers (chat, vision, image, audio) populated from your account (GET /models) — the
   **vision** picker lists only the models whose image input the provider really confirms
   (see *Vision models that actually see*)
-- **Thinking depth** for the chat model — the levels your provider actually confirms for that
-  model, so an answer can arrive in seconds instead of minutes (see *Thinking depth*)
+- **Thinking depth** for the chat model (*Denktiefe*) — the levels your provider actually confirms for it,
+  plus *Model default*; the footer says how many levels were confirmed or points at "Load models from
+  account" while they are still unknown (see *Thinking depth*)
 - Language, read-aloud toggle, connection test
 
 <img src="docs/screenshots/03-settings.png" alt="Settings sheet: language picker, Qwen Cloud API key field, endpoint picker with base URL and the model pickers" width="270">
@@ -284,11 +314,12 @@ open GwenMobile.xcodeproj
 
 ## Tests
 The `GwenMobileTests` target holds the unit tests (pure logic: audio codec, intent
-heuristics, routing, request building, response decoding, error translation,
-localisation, storage, conversation store, conversation persistence, conversation memory, routing context, stream throttling, answer export, the
+heuristics, routing, request building, response decoding, error translation, localisation, storage, conversation store, conversation persistence, conversation memory, routing context, stream throttling, the
+stream retry policy, the picture ordinal mapping, the research digest, answer export, the
 waiting-indicator rhythm, the share presentation closer, thinking levels and the provider level probe,
 the picture viewer (preview target, zoom geometry, page loading)).
-No network, no device.
+No network, no device. The features that need a microphone, a camera or the real account are driven
+by the device probes below instead.
 ```
 xcodegen generate
 xcodebuild test -scheme GwenMobile -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
@@ -403,9 +434,32 @@ mean RGB and edge length measured on the device,
 `gwenmobile://test/<attachment-file-name>` for a single image. They assume the conversations and image files of the reference
 device exist in the app sandbox (`img_0B85747A-BAA.jpg`, `img_7924D952-6BF.jpg`) and
 log to the `flow` os-log subsystem. Release builds contain none of this code
-(`GwenMobile/DebugFlowTests.swift` is `#if DEBUG`).
+(`GwenMobile/DebugFlowTests.swift`, `GwenMobile/DebugSweep.swift` and `GwenMobile/DebugFeatureProbes.swift` are `#if DEBUG`).
 
-The same scenarios can be started without the URL scheme, which is useful when
+### Debug-only feature probes
+The same URL scheme starts the end-to-end probes that cover the paths no unit test can reach —
+each writes its own report into `Documents/`:
+
+| Scenario | Covers | Report |
+|---|---|---|
+| `webask` | the real send path with a research question ("Wer hat den Eurovision Song Contest 2026 gewonnen?"), its sources, the capsule gone | `web_ask.txt` |
+| `webchart` | search → chart in one sentence (the case that used to refuse), picture + points + sources | `web_chart.txt` |
+| `phototext` | a photographed text handed to the vision model and translated; asserts the router chose chat, not image edit | `photo_text.txt` |
+| `editype` | **typing in the input field while an image edit is running** — per-keystroke milliseconds, render counters, job result | `edit_type.txt` |
+| `typetest` / `scrolltest` / `camtypetest` | typing with the keyboard open, scrolling a heavy chat, typing with an attachment pending | `flow_trace.txt` |
+| `historywipe` | delete one chat, one message, all chats — with the undo receipt, the file trash and the 5 s expiry | `history_wipe.txt` |
+| `micrec` | the real microphone path: permission, recorder states, the countdown, an empty transcript as the honest result | `mic_rec.txt` |
+| `micloop` | the device speaks its own TTS into its microphone — read-aloud **and** recognition in one run | `mic_loop.txt` |
+| `ttsp` | cloud TTS through `AVAudioPlayer`: when playback starts, when the delegate ends it | `tts_play.txt` |
+| `voiceabort` | the path behind the stop button: `cancel()` while recording and while the audio is handed to ASR — nothing in the chat, no late transcript, attachment kept | `voice_abort.txt` |
+| `calwrite` | a real appointment created, changed and deleted again through the same `CalendarService.perform` the chat uses | `calendar_write.txt` |
+| `tlsretry` | the streaming retry: a failing certificate is retried once, an unknown host is not | `tls_retry.txt` |
+
+`micloop`, `ttsp`, `voiceabort` and `calwrite` touch the real world (microphone, speaker, calendar);
+`calwrite` removes its own appointment again. `historywipe` deletes every conversation and, once the
+undo window has passed, the picture files that no chat references any more.
+
+Every scenario and probe can also be started without the URL scheme, which is useful when
 `devicectl` is unavailable and the app has to be launched through `dvt launch`:
 
 ```
@@ -421,9 +475,29 @@ render counters, `STATS` = counters every 2 s). The stall heartbeat is a `Timer`
 python3 -m pymobiledevice3 apps pull com.mortis.gwenmobile Documents/flow_trace.txt /tmp/flow_trace.txt
 ```
 
+### Measured on the device (12.09.2026, iPhone 16)
+Everything above was run against the real account on the reference device, not only in the simulator:
+
+- **No main-thread stall in any run.** Every probe was started and its `flow_trace.txt` pulled before the
+  next launch: `STALL` never appeared — 0 hits across all runs, including 150 keystrokes with the keyboard
+  open (three rounds of a 50-character sentence), a 42-message chat scrolled to the end and back three
+  times, and an image edit that took 57,6 s while 28 characters were typed into the field next to it
+  (`schritt_max_ms=0`, the heartbeat counter kept running).
+- **Picture matrix 8/8** through `picsweep`: colour transfer both ways, the freshly attached photo, the
+  size transfer, the background transfer, the budget overflow, the negative control that must not draw.
+  Two of those cases failed before the ordinal mapping and the size wording above were introduced
+  (`fremde_formen_ok=false`, `farbe_ok=false`) and pass with them.
+- **Voice round trip**: `micloop` had the phone play its own TTS sentence into its microphone and the
+  provider returned "Die Kernfusion verbindet leichte Atomkerne" as "The can fusion verbindet leichte
+  atomkerne" — recognition and read-aloud in one measurement; `ttsp` shows playback ending after 5,5 s.
+- **Input bar geometry**, measured off a device screenshot at @3x: mic circle 102 px = 34,0 pt,
+  send/stop circle 102 px = 34,0 pt.
+- One caveat worth knowing: a transient `secureConnectionFailed` from the provider still surfaces as a
+  friendly error when both attempts fail (measured 2 of 4 attempts of one research question), and the app
+  then stores the translated hint instead of an answer — retrying is one tap away.
+
 ## Notes
-- `GwenMobile/Info.plist` is the single source of truth for bundle configuration
-  (privacy texts, URL scheme). It is not generated — edit the file, `project.yml`
+- `GwenMobile/Info.plist` is the single source of truth for bundle configuration  (privacy texts, URL scheme). It is not generated — edit the file, `project.yml`
   only points at it via `INFOPLIST_FILE`.
 - Default base URL: https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1
   (Token Plan account, live-tested: chat, vision, image edit, calendar routing).
@@ -447,3 +521,12 @@ python3 -m pymobiledevice3 apps pull com.mortis.gwenmobile Documents/flow_trace.
   opens), `HistoryCleaner`'s trash bookkeeping (before the undo receipt is published), the keychain
   round trip in `AppSettings`, the launch decode in `ChatStore.init` and `AVAudioSession`
   configuration around playback.
+- Conversation storage lives in its own unit (`ConversationPersisting` /
+  `ConversationFilePersistence`): the debounced write runs off the main actor, serialised through a
+  write chain so an older snapshot can never land after a newer one, while `flushPendingSave()` keeps
+  writing synchronously when nothing is in flight — the history is on disk before the app is backgrounded.
+- A connection that dies during the TLS handshake is retried **once** after 1200 ms — on the plain
+  requests (`HTTP.data`) and, since the same policy was pulled into `HTTP.isConnectionReset`, on the
+  streaming answer too (`QwenAPI.streamReset`). Never once the first token has arrived: a half-streamed
+  answer is not restarted, and cancellation, timeouts and offline stay untouched (measured with
+  `tlsretry`: 1941 ms for a failing certificate, no retry for an unknown host).
