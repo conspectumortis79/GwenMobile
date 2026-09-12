@@ -362,6 +362,13 @@ struct ChatView: View {
         !isBusy && !isStreaming && (!input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !pendingImages.isEmpty)
     }
 
+    private var voiceBusy: Bool { voice.state != .idle }
+
+    @MainActor private func abortVoice() {
+        flowMark("VOICE abbruch zustand=\(voice.state) anhaenge=\(pendingImages.count) zeichen=\(input.count)")
+        voice.cancel()
+    }
+
     func queue(pictures: [(image: UIImage, file: String?)]) {
         pendingImages = Array((pendingImages + pictures).prefix(ImagePolicy.maxPicturesPerRequest))
     }
@@ -452,25 +459,27 @@ struct ChatView: View {
                           : (voice.state == .processing ? "hourglass" : "mic"))
                         .font(.system(size: 19))
                         .foregroundStyle(voice.state == .recording ? Color.red : Color(.secondaryLabel))
-                        .frame(width: 30, height: 30)
+                        .frame(width: 34, height: 34)
                         .background(Circle().fill(voice.state == .recording ? Color.red.opacity(0.12) : Color.clear))
                 }
                 .disabled(voice.state == .processing || isStreaming || imageWorking)
 
                 Button {
-                    if isStreaming {
+                    if voiceBusy {
+                        abortVoice()
+                    } else if isStreaming {
                         ChatRunner.shared.cancel()
                     } else {
                         Task { await send() }
                     }
                 } label: {
-                    Image(systemName: isStreaming ? "stop.fill" : "arrow.up")
+                    Image(systemName: isStreaming || voiceBusy ? "stop.fill" : "arrow.up")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 34, height: 34)
-                        .background(Circle().fill(canSend || isStreaming ? Color.blue : Color(.systemGray3)))
+                        .background(Circle().fill(canSend || isStreaming || voiceBusy ? Color.blue : Color(.systemGray3)))
                 }
-                .disabled(!canSend && !isStreaming)
+                .disabled(!canSend && !isStreaming && !voiceBusy)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)

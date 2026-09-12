@@ -22,6 +22,7 @@ enum DebugFeatureProbe {
         case "calwrite": await calendarWrite(view)
         case "webchart": await webChart(view)
         case "tlsretry": await tlsRetry(view)
+        case "voiceabort": await voiceAbort(view)
         default: return false
         }
         return true
@@ -53,6 +54,51 @@ enum DebugFeatureProbe {
                    + "text=\(heard.text.map { oneLine($0) } ?? "keiner")")
         report.write(into: "mic_loop.txt")
         flowLog.info("MIKLOOP fertig")
+    }
+
+    private static func voiceAbort(_ view: ChatView) async {
+        var report = SweepReport()
+        guard let shot = await view.flowTestPicture() else {
+            report.add("SPRACHABBRUCH", "kein Referenzbild")
+            report.write(into: "voice_abort.txt")
+            return
+        }
+        let store = view.store
+        store.newConversation()
+        view.pendingImages = [(image: shot, file: nil)]
+        let before = store.current?.messages.count ?? -1
+
+        let first = TranscriptBox()
+        let recording = VoiceTranscriber()
+        recording.start(baseURL: view.settings.baseURL, key: view.settings.apiKey,
+                        model: view.settings.audioModel) { first.text = $0 }
+        try? await Task.sleep(for: .seconds(3))
+        report.add("WAEHREND_AUFNAHME", "zustand=\(recording.state) anhang=\(view.pendingImages.count) "
+                   + "nachrichten=\(store.current?.messages.count ?? -1) vorher=\(before)")
+        recording.cancel()
+        try? await Task.sleep(for: .milliseconds(700))
+        report.add("NACH_ABBRUCH", "zustand=\(recording.state) text=\(first.text ?? "keiner") "
+                   + "fehler=\(recording.lastError.map { $0.message } ?? "keine") "
+                   + "nachrichten=\(store.current?.messages.count ?? -1) anhang=\(view.pendingImages.count)")
+
+        let second = TranscriptBox()
+        let running = VoiceTranscriber()
+        running.start(baseURL: view.settings.baseURL, key: view.settings.apiKey,
+                      model: view.settings.audioModel) { second.text = $0 }
+        try? await Task.sleep(for: .seconds(2))
+        running.stopAndTranscribe(baseURL: view.settings.baseURL, key: view.settings.apiKey,
+                                 model: view.settings.audioModel) { second.text = $0 }
+        report.add("UEBERGABE_START", "zustand=\(running.state)")
+        running.cancel()
+        try? await Task.sleep(for: .milliseconds(700))
+        report.add("UEBERGABE_ABBRUCH", "zustand=\(running.state) text=\(second.text ?? "keiner") "
+                   + "nachrichten=\(store.current?.messages.count ?? -1)")
+        try? await Task.sleep(for: .seconds(3))
+        report.add("SPAETER", "text=\(second.text ?? "keiner") zustand=\(running.state) "
+                   + "nachrichten=\(store.current?.messages.count ?? -1)")
+        view.pendingImages = []
+        report.write(into: "voice_abort.txt")
+        flowLog.info("SPRACHABBRUCH fertig")
     }
 
     private static func tlsRetry(_ view: ChatView) async {

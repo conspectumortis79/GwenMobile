@@ -10,6 +10,12 @@ final class VoiceTranscriber: NSObject, ObservableObject, AVAudioRecorderDelegat
     static let sendChunkSize = 3200
     static let transcriptTimeout: TimeInterval = 15
 
+    enum Recognition {
+        case text(String)
+        case empty
+        case failed(String)
+    }
+
     @Published var state: State = .idle
     @Published var lastError: L.FriendlyError?
     @Published var remaining: Int?
@@ -18,6 +24,8 @@ final class VoiceTranscriber: NSObject, ObservableObject, AVAudioRecorderDelegat
     private var fileURL: URL?
     private var job: (baseURL: String, key: String, model: String, onText: @MainActor (String) -> Void)?
     private var ticker: Task<Void, Never>?
+    private var transcription: Task<Void, Never>?
+    private var epoch = 0
 
     func start(baseURL: String, key: String, model: String,
                onText: @escaping @MainActor (String) -> Void) {
@@ -89,33 +97,58 @@ final class VoiceTranscriber: NSObject, ObservableObject, AVAudioRecorderDelegat
                            onText: @escaping @MainActor (String) -> Void) {
         guard state == .recording, let rec = recorder, let url = fileURL else { return }
         state = .processing
+        epoch += 1
+        let mine = epoch
         recorder = nil
         job = nil
         ticker?.cancel()
         ticker = nil
         remaining = nil
         rec.stop()
-        Task {
-            defer { state = .idle }
-            do {
-                let pcm = try await Offload.run {
-                    let wav = try Data(contentsOf: url)
-                    try? FileManager.default.removeItem(at: url)
-                    return WAVCodec.pcm(fromWAV: wav)
-                }
-                guard pcm.count > Self.minPCMLength else {
-                    lastError = L.FriendlyError(message: L.t("asr_empty"), detail: "", openSettings: false)
-                    return
-                }
-                let text = try await Self.transcribe(pcm: pcm, baseURL: baseURL, key: key, model: model)
-                guard !text.isEmpty else {
-                    lastError = L.FriendlyError(message: L.t("asr_empty"), detail: "", openSettings: false)
-                    return
-                }
-                onText(text)
-            } catch {
-                lastError = L.friendlyError(error.localizedDescription)
+        transcription = Task { [weak self] in
+            let outcome = await Self.recognised(pcmURL: url, baseURL: baseURL, key: key, model: model)
+            guard let self, self.epoch == mine else { return }
+            self.transcription = nil
+            self.state = .idle
+            switch outcome {
+            case .text(let text): onText(text)
+            case .empty: lastError = L.FriendlyError(message: L.t("asr_empty"), detail: "", openSettings: false)
+            case .failed(let message): lastError = L.friendlyError(message)
             }
+        }
+    }
+
+    func cancel() {
+        guard state != .idle else { return }
+        epoch += 1
+        transcription?.cancel()
+        transcription = nil
+        let rec = recorder
+        recorder = nil
+        job = nil
+        ticker?.cancel()
+        ticker = nil
+        remaining = nil
+        let url = fileURL
+        state = .idle
+        rec?.stop()
+        if let url { try? FileManager.default.removeItem(at: url) }
+    }
+
+    private static func recognised(pcmURL url: URL, baseURL: String, key: String,
+                                   model: String) async -> Recognition {
+        do {
+            let pcm = try await Offload.run {
+                let wav = try Data(contentsOf: url)
+                try? FileManager.default.removeItem(at: url)
+                return WAVCodec.pcm(fromWAV: wav)
+            }
+            guard pcm.count > minPCMLength else { return .empty }
+            let text = try await transcribe(pcm: pcm, baseURL: baseURL, key: key, model: model)
+            guard !text.isEmpty else { return .empty }
+            return .text(text)
+        } catch {
+            return .failed(error.localizedDescription)
         }
     }
 
