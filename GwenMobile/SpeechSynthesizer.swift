@@ -33,7 +33,8 @@ final class SpeechSynthesizer: NSObject, ObservableObject, AVSpeechSynthesizerDe
             do {
                 let pcm = try await Self.synthesize(text: clean, baseURL: baseURL, key: key,
                                                    model: model, voice: voice)
-                let wav = WAVCodec.wav(fromPCM: pcm, sampleRate: Self.outputSampleRate)
+                let rate = Self.outputSampleRate
+                let wav = try await Offload.run { WAVCodec.wav(fromPCM: pcm, sampleRate: rate) }
                 guard !Task.isCancelled, gen == self.generation else {
                     if gen == self.generation { self.isSpeaking = false }
                     return
@@ -129,43 +130,50 @@ final class SpeechSynthesizer: NSObject, ObservableObject, AVSpeechSynthesizerDe
 
     static func synthesize(text: String, baseURL: String, key: String,
                            model: String, voice: String) async throws -> Data {
-        let client = try await RealtimeClient.opened(baseURL: baseURL, model: model, key: key,
-                                                     timeoutMessage: L.t("tts_timeout"),
-                                                     fallbackError: "TTS error")
-        defer { client.close() }
-        try await client.startSession([
-            "modalities": ["text", "audio"],
-            "voice": voice,
-            "output_audio_format": "pcm",
-            "turn_detection": NSNull(),
-        ])
+        let timeoutMessage = L.t("tts_timeout")
+        let emptyMessage = L.t("tts_empty")
         let prompt = L.t("tts_prefix") + text
-        try await client.send([
-            "type": "conversation.item.create",
-            "item": ["type": "message", "role": "user",
-                     "content": [["type": "input_text", "text": prompt]]],
-        ])
-        try await client.send(["type": "response.create"])
+        let deltaType = audioDeltaType
+        let doneType = responseDoneType
+        let timeout = audioTimeout
+        return try await Offload.run {
+            let client = try await RealtimeClient.opened(baseURL: baseURL, model: model, key: key,
+                                                         timeoutMessage: timeoutMessage,
+                                                         fallbackError: "TTS error")
+            defer { client.close() }
+            try await client.startSession([
+                "modalities": ["text", "audio"],
+                "voice": voice,
+                "output_audio_format": "pcm",
+                "turn_detection": NSNull(),
+            ])
+            try await client.send([
+                "type": "conversation.item.create",
+                "item": ["type": "message", "role": "user",
+                         "content": [["type": "input_text", "text": prompt]]],
+            ])
+            try await client.send(["type": "response.create"])
 
-        var pcm = Data()
-        let deadline = Date().addingTimeInterval(audioTimeout)
-        while Date() < deadline {
-            let ev = try await client.receive(until: deadline)
-            switch ev.type {
-            case audioDeltaType:
-                if let b64 = ev.delta, let d = Data(base64Encoded: b64) {
-                    pcm.append(d)
+            var pcm = Data()
+            let deadline = Date().addingTimeInterval(timeout)
+            while Date() < deadline {
+                let ev = try await client.receive(until: deadline)
+                switch ev.type {
+                case deltaType:
+                    if let b64 = ev.delta, let d = Data(base64Encoded: b64) {
+                        pcm.append(d)
+                    }
+                case doneType:
+                    if !pcm.isEmpty { return pcm }
+                    throw APIError(message: emptyMessage)
+                case RealtimeClient.errorType:
+                    throw APIError(message: ev.errorMessage ?? "TTS error")
+                default:
+                    break
                 }
-            case responseDoneType:
-                if !pcm.isEmpty { return pcm }
-                throw APIError(message: L.t("tts_empty"))
-            case RealtimeClient.errorType:
-                throw APIError(message: ev.errorMessage ?? "TTS error")
-            default:
-                break
             }
+            throw APIError(message: timeoutMessage)
         }
-        throw APIError(message: L.t("tts_timeout"))
     }
 
     private static func routeToSpeaker() {

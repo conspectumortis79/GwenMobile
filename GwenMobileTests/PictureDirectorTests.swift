@@ -64,6 +64,16 @@ final class PictureDirectorTests: XCTestCase {
         XCTAssertTrue(instructions.contains("what must stay exactly as it is in the target image"))
         XCTAssertTrue(instructions.contains("never use picture numbers"))
         XCTAssertTrue(instructions.contains("just sent by the user"))
+        XCTAssertTrue(instructions.contains("Every BILD label also carries its place inside the chat"))
+        XCTAssertTrue(instructions.contains("counts the pictures of the whole chat"))
+        XCTAssertTrue(instructions.contains("only the size of the target's own object changes"))
+    }
+
+    func testLabelsCarryTheChatPlaceOfEveryShownPicture() {
+        XCTAssertEqual(PictureDirector.label(number: 1, shown: [2, 3], fresh: []), "BILD 1 (chat position 2)")
+        XCTAssertEqual(PictureDirector.label(number: 2, shown: [2, 3], fresh: [2]),
+                       "BILD 2 (chat position 3) (just sent by the user)")
+        XCTAssertEqual(PictureDirector.label(number: 9, shown: [2, 3], fresh: []), "BILD 9")
     }
 
     func testFreshPicturesAreLabelledSoTheDirectorCanTellThemApart() throws {
@@ -76,10 +86,10 @@ final class PictureDirectorTests: XCTestCase {
         XCTAssertEqual(content.count, 5)
         let text = (content.first?["text"] as? String) ?? ""
         XCTAssertTrue(text.contains("ANFRAGE: übertrage die farbe"))
-        XCTAssertEqual(content[1]["text"] as? String, "BILD 1")
+        XCTAssertEqual(content[1]["text"] as? String, "BILD 1 (chat position 2)")
         XCTAssertEqual(((content[2]["image_url"] as? [String: Any])?["url"] as? String) ?? "",
                        "data:image/jpeg;base64,\(one.base64EncodedString())")
-        XCTAssertEqual(content[3]["text"] as? String, "BILD 2 (just sent by the user)")
+        XCTAssertEqual(content[3]["text"] as? String, "BILD 2 (chat position 3) (just sent by the user)")
     }
 
     func testRequestSendsNoThinkingKeysAndTheChatCompletionsEndpoint() throws {

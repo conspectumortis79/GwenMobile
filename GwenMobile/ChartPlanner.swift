@@ -39,15 +39,25 @@ enum ChartPlanner {
 
     static func plan(baseURL: String, key: String, model: String, question: String, data: String,
                      images: [Data] = [],
-                     thinking: ThinkingDirective = .nothing) async throws -> ChartPlan? {
+                     thinking: ThinkingDirective = .nothing,
+                     attempts: Int = 2) async throws -> ChartPlan? {
         let capped = data.count > maxDataChars ? String(data.prefix(maxDataChars)) : data
-        let raw = try await Task.detached(priority: .userInitiated) { () throws -> String? in
-            let req = try makeRequest(baseURL: baseURL, key: key, model: model,
-                                      question: question, data: capped, images: images,
-                                      thinking: thinking)
-            return try await QwenAPI.askText(req)
-        }.value
-        return plan(from: raw)
+        for attempt in 1...max(1, attempts) {
+            let raw = try await Offload.run { () -> String? in
+                let req = try makeRequest(baseURL: baseURL, key: key, model: model,
+                                          question: question, data: capped, images: images,
+                                          thinking: thinking)
+                return try await QwenAPI.askText(req)
+            }
+            if let plan = plan(from: raw) { return plan }
+            flowMark("CHARTPLAN unbrauchbar versuch=\(attempt) daten=\(capped.count) "
+                     + "bilder=\(images.count) antwort=\(oneLine(raw))")
+        }
+        return nil
+    }
+
+    private static func oneLine(_ raw: String?) -> String {
+        String((raw ?? "keine Antwort").replacingOccurrences(of: "\n", with: " ").prefix(220))
     }
 
     private static func instructions(hasImages: Bool) -> String {

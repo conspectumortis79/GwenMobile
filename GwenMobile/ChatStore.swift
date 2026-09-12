@@ -10,16 +10,14 @@ final class ChatStore: ObservableObject {
     let images: ImageFeed
     lazy var cleaner = HistoryCleaner(store: self, media: media, feed: images)
 
-    private let paths: StoragePaths
-    private let fileManager: FileManager
+    private let persistence: ConversationPersisting
 
     init(media: MediaStore = MediaStore(),
          paths: StoragePaths = StoragePaths(),
-         fileManager: FileManager = .default) {
+         persistence: ConversationPersisting? = nil) {
         self.media = media
         self.images = ImageFeed(reader: media)
-        self.paths = paths
-        self.fileManager = fileManager
+        self.persistence = persistence ?? ConversationFilePersistence(url: paths.conversations)
         media.prepareDirectories()
         load()
         if conversations.isEmpty { newConversation() }
@@ -103,19 +101,30 @@ final class ChatStore: ObservableObject {
     }
 
     private func load() {
-        guard let data = fileManager.contents(atPath: paths.conversations.path),
-              let convs = try? JSONDecoder().decode([Conversation].self, from: data) else { return }
-        conversations = convs.sorted { $0.updatedAt > $1.updatedAt }
+        guard let stored = persistence.load() else { return }
+        conversations = stored.sorted { $0.updatedAt > $1.updatedAt }
     }
 
     private var saveTask: Task<Void, Never>?
+    private var writeGate: Task<Void, Never>?
+    private var writeToken = 0
+    private var writesInFlight = 0
 
     static let saveDebounce: Duration = .milliseconds(250)
 
     func flushPendingSave() {
         saveTask?.cancel()
         saveTask = nil
-        saveNow()
+        guard writesInFlight == 0 else {
+            enqueueWrite(conversations, immediate: true)
+            return
+        }
+        do {
+            try persistence.persistNow(conversations)
+            storageProblem = nil
+        } catch {
+            reportSaveFailure(error)
+        }
     }
 
     private func save() {
@@ -124,19 +133,33 @@ final class ChatStore: ObservableObject {
             try? await Task.sleep(for: Self.saveDebounce)
             guard !Task.isCancelled, let self else { return }
             self.saveTask = nil
-            self.saveNow()
+            self.enqueueWrite(self.conversations, immediate: false)
         }
     }
 
-    private func saveNow() {
-        do {
-            let data = try JSONEncoder().encode(conversations)
-            try data.write(to: paths.conversations, options: .atomic)
-            storageProblem = nil
-        } catch {
-            storageProblem = L.t("storage_save_failed")
-            flowLog.error("SAVE fehlgeschlagen \(error.localizedDescription, privacy: .public)")
+    private func enqueueWrite(_ snapshot: [Conversation], immediate: Bool) {
+        let previous = writeGate
+        let persistence = self.persistence
+        writeToken += 1
+        let token = writeToken
+        writesInFlight += 1
+        writeGate = Task { [weak self] in
+            _ = await previous?.value
+            do {
+                if immediate { try persistence.persistNow(snapshot) }
+                else { try await persistence.persist(snapshot) }
+                self?.storageProblem = nil
+            } catch {
+                self?.reportSaveFailure(error)
+            }
+            self?.writesInFlight -= 1
+            if self?.writeToken == token { self?.writeGate = nil }
         }
+    }
+
+    private func reportSaveFailure(_ error: Error) {
+        storageProblem = L.t("storage_save_failed")
+        flowLog.error("SAVE fehlgeschlagen \(error.localizedDescription, privacy: .public)")
     }
 
     func dismissStorageProblem() { storageProblem = nil }

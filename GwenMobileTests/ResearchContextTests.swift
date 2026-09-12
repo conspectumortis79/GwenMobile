@@ -36,6 +36,25 @@ final class ResearchContextTests: XCTestCase {
         XCTAssertEqual(WebResearch.dataDigest(from: hits, limit: 40).count, 40)
     }
 
+    func testTightBudgetStillReachesEveryFetchedSource() {
+        let hits = [Fixtures.hit("Statista", "https://statista.test/a", "statista.test", String(repeating: "a", count: 5000)),
+                    Fixtures.hit("Wikipedia", "https://de.wikipedia.test/b", "wikipedia.test", String(repeating: "b", count: 5000)),
+                    Fixtures.hit("BP", "https://bp.test/c", "bp.test", "526 TWh im Jahr 2025")]
+        let digest = WebResearch.dataDigest(from: hits, limit: 120)
+        XCTAssertEqual(digest.count, 120)
+        XCTAssertTrue(digest.contains("## Quelle [1]"))
+        XCTAssertTrue(digest.contains("## Quelle [2]"))
+        XCTAssertTrue(digest.contains("## Quelle [3]"))
+    }
+
+    func testWideBudgetKeepsTheWholeTextOfEverySource() {
+        let hits = [Fixtures.hit("Statista", "https://statista.test/a", "statista.test", "83,2 Millionen"),
+                    Fixtures.hit("Wikipedia", "https://de.wikipedia.test/b", "wikipedia.test", "84,7 Millionen")]
+        let digest = WebResearch.dataDigest(from: hits)
+        XCTAssertTrue(digest.contains("83,2 Millionen"))
+        XCTAssertTrue(digest.contains("84,7 Millionen"))
+    }
+
     func testAnswerPromptAndDigestShareOneSourceBlockFormat() throws {
         let hits = [Fixtures.hit("Statista", "https://statista.test/a", "statista.test", "83,2 Millionen")]
         let request = try WebSearch.makeAnswerRequest(baseURL: "https://api.test/v1", key: "k", model: "m",

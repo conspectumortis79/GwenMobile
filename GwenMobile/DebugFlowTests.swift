@@ -31,6 +31,7 @@ extension ChatView {
     }
 
     func runFlowTest(_ name: String) async {
+        if await DebugFeatureProbe.run(name, view: self) { return }
         if name == "sweep" {
             await runSweep()
             return
@@ -280,8 +281,8 @@ extension ChatView {
             ?? lastImageCandidate() else { return }
         flowLog.info("TEST step1 attachForEditing file=\(name, privacy: .public)")
         attachForEditing(att)
-        guard !pendingImages.isEmpty else { flowLog.error("TEST no pending image"); return }
         try? await Task.sleep(for: .milliseconds(800))
+        guard !pendingImages.isEmpty else { flowLog.error("TEST no pending image"); return }
         flowLog.info("TEST step2 input+send")
         input = "Mache das Bild etwas heller"
         await send()

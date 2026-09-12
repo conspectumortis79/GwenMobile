@@ -285,7 +285,7 @@ open GwenMobile.xcodeproj
 ## Tests
 The `GwenMobileTests` target holds the unit tests (pure logic: audio codec, intent
 heuristics, routing, request building, response decoding, error translation,
-localisation, storage, conversation store, conversation memory, routing context, stream throttling, answer export, the
+localisation, storage, conversation store, conversation persistence, conversation memory, routing context, stream throttling, answer export, the
 waiting-indicator rhythm, the share presentation closer, thinking levels and the provider level probe,
 the picture viewer (preview target, zoom geometry, page loading)).
 No network, no device.
@@ -440,3 +440,10 @@ python3 -m pymobiledevice3 apps pull com.mortis.gwenmobile Documents/flow_trace.
 - Camera and calendar permission dialogs only work on real devices (not simulator).
 - Generated image URLs expire after ~24 h; the app downloads and stores them
   immediately into its sandbox.
+- Nothing heavy runs on the main actor: picture payload encoding, response decoding, conversation
+  persistence, HTML stripping of web pages and audio conversion all go through `Offload.run`, which
+  executes the work on a detached task. Deliberate exceptions that stay on the caller's thread because
+  the result is needed before the next user-visible step: `AnswerExporter.write` (before the share sheet
+  opens), `HistoryCleaner`'s trash bookkeeping (before the undo receipt is published), the keychain
+  round trip in `AppSettings`, the launch decode in `ChatStore.init` and `AVAudioSession`
+  configuration around playback.
