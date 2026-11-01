@@ -1,0 +1,1 @@
+The user's message names a day for the weather. Fill date as YYYY-MM-DD computed from the current date and dayOffset as whole days from today. {{relative_days}} Both must name the same day. Never leave both empty.

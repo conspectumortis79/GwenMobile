@@ -1,0 +1,1 @@
+Lists the closest places of one kind to where the user is now: the nearest supermarket, pharmacy, station, ATM, shop or chain. For one named destination use route_to_place. It knows no opening hours or prices: if the message wants those too, this is the first call and search_web the second.

@@ -1,0 +1,53 @@
+import GwenMobileKit
+import Foundation
+
+enum AnswerError {
+    static let marker = "⚠️ "
+    static let detailPrefix = "\n\nℹ️ "
+    static let rawDetailLimit = 120
+
+    static func model(_ error: Error, model: String?, generic: String) -> String {
+        let (raw, status) = parts(of: error)
+        return AnswerError.model(raw, model: model, generic: generic, status: status)
+    }
+
+    static func other(_ error: Error, model: String? = nil, generic: String) -> String {
+        let (raw, status) = parts(of: error)
+        return AnswerError.other(raw, model: model, generic: generic, status: status)
+    }
+
+    private static func parts(of error: Error) -> (raw: String, status: Int?) {
+        guard let api = error as? APIError else { return (error.localizedDescription, nil) }
+        return (api.message, api.status)
+    }
+
+    static func model(_ raw: String, model: String?, generic: String, status: Int? = nil) -> String {
+        let t = raw.lowercased()
+        let detail = String(raw.prefix(rawDetailLimit))
+        if IntentHeuristics.safetyRejection.matches(t) {
+            return marker + L.t("err_data_inspection") + detailPrefix + detail
+        }
+        if IntentHeuristics.contentPolicyRejection.matches(t) {
+            return marker + L.t("err_content_policy") + detailPrefix + detail
+        }
+        if IntentHeuristics.invalidInput.matches(t) {
+            return marker + L.t("err_invalid_input") + detail
+        }
+        if IntentHeuristics.timeoutInterruption.matches(t) {
+            return marker + L.t("err_timeout")
+        }
+        return other(raw, model: model, generic: generic, status: status)
+    }
+
+    static func other(_ raw: String, model: String? = nil, generic: String, status: Int? = nil) -> String {
+        let friendly = L.friendlyError(raw, model: model, status: status)
+        if friendly.message != raw {
+            return marker + friendly.message + (friendly.detail.isEmpty ? "" : detailPrefix + friendly.detail)
+        }
+        let detail = String(raw.prefix(rawDetailLimit))
+        guard !detail.isEmpty, detail != generic else { return marker + generic }
+        guard !generic.isEmpty else { return marker + detail }
+        let separator = generic.last.map { $0.isWhitespace || $0 == ":" || $0 == "：" } == true ? "" : " "
+        return marker + generic + separator + detail
+    }
+}

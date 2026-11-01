@@ -1,0 +1,1 @@
+Writes code the user asked the app to build: a program, a game, a web page, a script, a function, a component, a config or data file, and every change to code already in the chat. The app shows it as a file the user can save and open.

@@ -1,0 +1,302 @@
+name: GwenMobile
+options:
+  bundleIdPrefix: com.mortis
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+packages:
+  SpotifyiOS:
+    url: https://github.com/spotify/ios-sdk
+    exactVersion: 5.0.1
+  MLXSwift:
+    url: https://github.com/ml-explore/mlx-swift
+    exactVersion: 0.32.3
+  MLXSwiftLM:
+    url: https://github.com/ml-explore/mlx-swift-lm
+    exactVersion: 3.32.3
+  SwiftTransformers:
+    url: https://github.com/huggingface/swift-transformers
+    exactVersion: 1.3.5
+configFiles:
+  Debug: Config/Signing.xcconfig
+  Release: Config/Signing.xcconfig
+schemes:
+  GwenMobile:
+    build:
+      targets:
+        GwenMobile: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - GwenMobileTests
+targets:
+  GwenMobileKit:
+    type: framework
+    platform: iOS
+    sources:
+      - GwenMobile/App/FlowLog.swift
+      - GwenMobile/Shared/APIError.swift
+      - GwenMobile/Shared/FailureReporter.swift
+      - GwenMobile/Shared/HTMLEntities.swift
+      - GwenMobile/Shared/LooseNumber.swift
+      - GwenMobile/Shared/MatchScoring.swift
+      - GwenMobile/Shared/EntityKey.swift
+      - GwenMobile/Shared/Offload.swift
+      - GwenMobile/Shared/RegexCache.swift
+      - GwenMobile/Shared/Synchronized.swift
+      - GwenMobile/Shared/TextFolding.swift
+      - GwenMobile/Shared/TextLine.swift
+      - GwenMobile/Shared/TruncatedStringList.swift
+      - GwenMobile/Storage/StorageJSON.swift
+      - GwenMobile/Storage/StoragePaths.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mortis.gwenmobilekit
+        GENERATE_INFOPLIST_FILE: true
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        SUPPORTS_MACCATALYST: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+  GwenMobileFeatureCore:
+    type: framework
+    platform: iOS
+    sources:
+      - path: GwenMobile
+        excludes:
+          - "Info.plist"
+          - "Resources"
+          - "Resources/**"
+          - "Assets.xcassets"
+          - "Assets.xcassets/**"
+          - "*.lproj"
+          - "*.lproj/**"
+          - "App/FlowLog.swift"
+          - "Shared/APIError.swift"
+          - "Shared/FailureReporter.swift"
+          - "Shared/HTMLEntities.swift"
+          - "Shared/LooseNumber.swift"
+          - "Shared/MatchScoring.swift"
+          - "Shared/EntityKey.swift"
+          - "Shared/Offload.swift"
+          - "Shared/RegexCache.swift"
+          - "Shared/Synchronized.swift"
+          - "Shared/TextFolding.swift"
+          - "Shared/TextLine.swift"
+          - "Shared/TruncatedStringList.swift"
+          - "Storage/StorageJSON.swift"
+          - "Storage/StoragePaths.swift"
+    dependencies:
+      - target: GwenMobileKit
+      - package: SpotifyiOS
+        destinationFilters: [iOS]
+      - package: MLXSwift
+        product: MLX
+      - package: MLXSwiftLM
+        product: MLXLMCommon
+      - package: MLXSwiftLM
+        product: MLXVLM
+      - package: MLXSwiftLM
+        product: MLXLLM
+      - package: MLXSwiftLM
+        product: MLXHuggingFace
+      - package: SwiftTransformers
+        product: Tokenizers
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mortis.gwenmobilefeaturecore
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_FILE: ""
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        SUPPORTS_MACCATALYST: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ENABLE_TESTABILITY: YES
+
+  GwenMobileSystem:
+    type: framework
+    platform: iOS
+    sources:
+      - GwenMobileSystem
+    dependencies:
+      - target: GwenMobileKit
+      - target: GwenMobileFeatureCore
+      - package: SpotifyiOS
+        destinationFilters: [iOS]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mortis.gwenmobilesystem
+        GENERATE_INFOPLIST_FILE: true
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        SUPPORTS_MACCATALYST: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ENABLE_TESTABILITY: YES
+
+  GwenMobileAdapters:
+    type: framework
+    platform: iOS
+    sources:
+      - GwenMobileAdapters
+    dependencies:
+      - target: GwenMobileKit
+      - target: GwenMobileFeatureCore
+      - target: GwenMobileSystem
+      - package: SpotifyiOS
+        destinationFilters: [iOS]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mortis.gwenmobileadapters
+        GENERATE_INFOPLIST_FILE: true
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        SUPPORTS_MACCATALYST: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ENABLE_TESTABILITY: YES
+
+  GwenMobileDevice:
+    type: framework
+    platform: iOS
+    sources:
+      - GwenMobileDevice
+    dependencies:
+      - target: GwenMobileKit
+      - target: GwenMobileFeatureCore
+      - target: GwenMobileSystem
+      - target: GwenMobileAdapters
+      - package: SpotifyiOS
+        destinationFilters: [iOS]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mortis.gwenmobiledevice
+        GENERATE_INFOPLIST_FILE: true
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        SUPPORTS_MACCATALYST: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ENABLE_TESTABILITY: YES
+
+  GwenMobileProbes:
+    type: framework
+    platform: iOS
+    sources:
+      - GwenMobileProbes
+    dependencies:
+      - target: GwenMobileKit
+      - target: GwenMobileFeatureCore
+      - target: GwenMobileSystem
+      - target: GwenMobileAdapters
+      - target: GwenMobileDevice
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mortis.gwenmobileprobes
+        GENERATE_INFOPLIST_FILE: true
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        SUPPORTS_MACCATALYST: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+  GwenMobile:
+    type: application
+    platform: iOS
+    sources:
+      - GwenMobileShell
+      - path: GwenMobile
+        excludes:
+          - "**/*.swift"
+          - "Info.plist"
+    dependencies:
+      - target: GwenMobileKit
+        embed: true
+      - target: GwenMobileFeatureCore
+        embed: true
+      - target: GwenMobileSystem
+        embed: true
+      - target: GwenMobileAdapters
+        embed: true
+      - target: GwenMobileDevice
+        embed: true
+      - target: GwenMobileProbes
+        embed: true
+        weak: true
+      - target: GwenMobileLiveActivity
+        embed: true
+        codeSign: true
+        platformFilter: iOS
+      - package: SpotifyiOS
+        destinationFilters: [iOS]
+    settings:
+      base:
+        INFOPLIST_FILE: GwenMobile/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.mortis.gwenmobile
+        PRODUCT_NAME: GwenMobile
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: MacOS/GwenMobile.entitlements
+        CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]: $(GWEN_ENTITLEMENTS_$(GWEN_DIALER)_$(GWEN_MESSAGING))
+        GWEN_ENTITLEMENTS_NO_NO: Config/LocalModels.entitlements
+        GWEN_ENTITLEMENTS_YES_: Config/DefaultDialer.entitlements
+        GWEN_ENTITLEMENTS_YES_NO: Config/DefaultDialer.entitlements
+        GWEN_ENTITLEMENTS__YES: Config/CarrierMessaging.entitlements
+        GWEN_ENTITLEMENTS_NO_YES: Config/CarrierMessaging.entitlements
+        GWEN_ENTITLEMENTS_YES_YES: Config/DialerAndMessaging.entitlements
+        GWEN_DIALER_ACTIVE[sdk=iphoneos*]: $(GWEN_DIALER)
+        GWEN_MESSAGING_ACTIVE[sdk=iphoneos*]: $(GWEN_MESSAGING)
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        COREML_CODEGEN_LANGUAGE: Objective-C
+        SWIFT_VERSION: "6.0"
+        SUPPORTS_MACCATALYST: YES
+        PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]: maccatalyst.com.mortis.gwenmobile
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+    postBuildScripts:
+      - name: Remove Debug Probes From Release
+        script: |
+          if [ "${CONFIGURATION}" = "Release" ]; then
+            rm -rf "${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GwenMobileProbes.framework"
+          fi
+        basedOnDependencyAnalysis: false
+
+  GwenMobileLiveActivity:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: GwenMobileLiveActivity
+        excludes:
+          - "Info.plist"
+      - path: GwenMobileDevice/Voice/ListeningActivityAttributes.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mortis.gwenmobile.liveactivity
+        PRODUCT_NAME: GwenMobileLiveActivity
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "6.0"
+        SUPPORTS_MACCATALYST: NO
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: false
+        INFOPLIST_FILE: GwenMobileLiveActivity/Info.plist
+
+  GwenMobileTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: GwenMobileTests
+    dependencies:
+      - target: GwenMobile
+      - target: GwenMobileKit
+      - target: GwenMobileFeatureCore
+      - target: GwenMobileSystem
+      - target: GwenMobileAdapters
+      - target: GwenMobileDevice
+      - target: GwenMobileProbes
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/GwenMobile.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GwenMobile"

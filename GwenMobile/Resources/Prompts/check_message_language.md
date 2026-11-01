@@ -1,0 +1,1 @@
+Your previous {{message_tool}} text was not in the user's language. The user wrote in {{language}}: use {{language}} and keep the person as named - only an explicit wish for another language allows a different one.

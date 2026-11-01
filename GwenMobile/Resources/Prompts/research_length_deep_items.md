@@ -1,0 +1,1 @@
+ The earlier answer listed {{items}} items: cover every one of them in its own list point, in the same order, with up to about {{each}} words each.

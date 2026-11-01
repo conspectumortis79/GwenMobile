@@ -1,0 +1,1 @@
+Answers in plain chat and never changes a picture - only {{edit_tool}} shows a new one. Use it when no action below is wanted, including questions about a picture on screen and reading, quoting or translating an attached picture or file. If the message also wants a change or lookup, this is the first call, the other tool the second one.

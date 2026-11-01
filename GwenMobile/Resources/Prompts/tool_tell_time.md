@@ -1,0 +1,1 @@
+Tells the current time, date or weekday from the device clock, also for another city, country or time zone. Use it whenever the user asks what time, date or weekday it is now, here or elsewhere. Never to work out another day or duration - that is answer_in_chat or search_web; never for an appointment, reminder or timer ({{calendar_tool}}, {{reminder_tool}}, {{timer_tool}}).

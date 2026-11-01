@@ -1,0 +1,1 @@
+Rewrites a passage into another language word for word; the iPhone translates itself. Use it whenever the words are already in the chat, also "how do you say that in French". Leave text empty when the previous answer should be translated.

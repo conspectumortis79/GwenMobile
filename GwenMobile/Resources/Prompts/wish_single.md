@@ -1,0 +1,1 @@
+The app already split the user's message into single wishes, and the user text is exactly one of them: answer it with exactly one call. The recent conversation is background only; this wish alone decides the tool, the place and the date. Never repeat the tool of the last assistant answer because the transcript shows it.

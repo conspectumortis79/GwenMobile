@@ -1,0 +1,2 @@
+kind=Which paper the user names: invoice for a bill to pay, authority for a letter from an office, receipt for a till receipt, letter for a private or business letter, other when no kind is named. Only from the user's words.
+remind=true when a date, deadline or due date from the document should become a reminder - also "deadline as reminder", "warranty as reminder", "remind me of the deadline"; false otherwise.

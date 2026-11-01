@@ -1,0 +1,1 @@
+None of your previous search terms appears in the user's text. A place, shop or chain the user named goes into query and first term exactly as written; if they only described a need, keep the category.

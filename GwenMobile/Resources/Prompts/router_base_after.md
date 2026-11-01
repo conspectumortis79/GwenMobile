@@ -1,0 +1,1 @@
+One place not about getting there is answer_in_chat or search_web. {{briefing_tool}} for the day as a whole - what is up today, tomorrow or the day after tomorrow (dayAfter), a summary of the day with appointments, weather and open things. One single appointment, one reminder, only the weather or a whole week is not the briefing.

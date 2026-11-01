@@ -1,0 +1,14 @@
+action=create for a new reminder or list item, update to change, complete to tick off an existing one, delete to remove, list to read a list and fill list with the name the user gives.
+title=The reminder's subject in the user's words: the appointment, purchase or task the reminder is about. A person, object or action that follows the reminder verb is the subject and is never a list or a location. A named subject stays the title even when minutes, seconds, a day, a place or a list are also named. A name the user gives the reminder is its title, never its list or location. Empty when none.
+due=Local YYYY-MM-DD HH:MM, or YYYY-MM-DD for a day without a time; only when a day or time is named.
+minutes=Whole minutes from now for a minute duration or timer; leave due empty.
+seconds=Whole seconds from now for under a minute or named seconds; leave due and minutes empty.
+allDay=true for a named day without a time; false or empty when due has a time.
+list=Only a list or shopping list the user names as the target for the item. A subject, person, shop, city, venue or time is never this list. A reminder's own name is never this list; a list from an earlier turn is not this reminder's list. Empty when none.
+repeat=daily, weekly, monthly or yearly; only when it returns.
+repeatInterval=Every how many days, weeks, months or years; empty or 1 for every one.
+priority=high when important or urgent, low when it can wait; empty otherwise.
+location=Only the trigger place where the reminder fires: a shop, city, district, building, home or kind of place, named as the when or where condition. A person, object, task, list or time is never this location. Fill it only for a create or update with such a trigger; leave it empty for complete, delete and list. Never put the place in list, notes or title. The app takes the nearest match for a kind.
+proximity=arrive when getting there, leave when leaving; arrive when neither is said.
+notes=Text to store inside the reminder, after a content phrase - not the title, list or the place trigger.
+find=Words identifying an existing reminder; only update, complete or delete, never create. A create never fills find and never puts its subject here.

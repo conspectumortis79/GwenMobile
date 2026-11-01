@@ -1,0 +1,1 @@
+Opens a route in maps to one clear destination the user named: a street with a number, a square, a town, a station or a named building. Use it whenever the user wants to get there, in the travel mode they mention.

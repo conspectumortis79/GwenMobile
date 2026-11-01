@@ -1,0 +1,1 @@
+Creates, changes or deletes a calendar appointment. The wish may be incomplete - only a time, no date, title or end - the app fills the rest; still this tool, never an answer in chat. If something is looked up as well, that tool comes first. Never for a reminder, to-do, shopping item, timer or arrival trigger - those are {{reminder_tool}}.

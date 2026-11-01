@@ -1,0 +1,1 @@
+Writes and sends a text message to one person or business from the contacts. Use it whenever a message should be sent now. Take recipient and text only from the user's own words, never from these examples. Never for mail, WhatsApp or another app, a question about messages, or a call ({{call_tool}}).
