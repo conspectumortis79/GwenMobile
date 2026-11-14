@@ -1,0 +1,14 @@
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.playground/xcuserdata/
+.DS_Store
+.analysis/
+.pi/
+__pycache__/
+GwenMobile.xcodeproj/
+Config/Signing.xcconfig
+docs/ideas/
+docs/mockups/
+.github/

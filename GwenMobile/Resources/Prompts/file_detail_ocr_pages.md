@@ -1,0 +1,1 @@
+— {{pages}} pages, text recognized on this device (OCR)

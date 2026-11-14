@@ -1,0 +1,1 @@
+Your weather call named two different days: date {{date}} lies {{date_days}} days after today, but dayOffset is {{day_offset}}. Read the day in the user's message again and count it from today. {{relative_days}} Then fill dayOffset with that count and date with the same day.

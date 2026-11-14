@@ -1,0 +1,1 @@
+Which fetched web sources address the user's question? Only when subject, place and date are the question's own; another place, date or topic does not. Keep every source that could support the answer; when merely uncertain, keep it. Answer with one keep_sources call and nothing else.

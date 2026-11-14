@@ -1,0 +1,1 @@
+Answer with exactly one call: {{reminder_tool}}. Take the title and the due date only from the SCANNED DOCUMENT block above and invent nothing; leave the list empty unless the user named one.

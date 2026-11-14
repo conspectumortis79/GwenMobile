@@ -1,0 +1,1 @@
+— rich text read on this device

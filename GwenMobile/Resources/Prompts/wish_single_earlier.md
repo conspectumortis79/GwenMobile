@@ -1,0 +1,1 @@
+Earlier wishes of the same message, which the app carries out before this one: {{earlier_wishes}} A picture that one of them draws, finds or changes is already in the chat for this wish. When this wish changes that picture, answer with edit_picture, or make_monochrome when only the colours go - never with find_pictures again.

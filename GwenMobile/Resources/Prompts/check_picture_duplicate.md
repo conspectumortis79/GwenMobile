@@ -1,0 +1,1 @@
+Two wishes from one user message ask for pictures. Decide whether one and the same picture satisfies both: the same subject and the same look. Different variants, alternatives, styles, poses, scenes or separate results are not the same picture. Answer only with SAME or DIFFERENT.

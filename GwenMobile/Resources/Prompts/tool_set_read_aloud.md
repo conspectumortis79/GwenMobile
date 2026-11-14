@@ -1,0 +1,1 @@
+Switches reading this app's answers aloud on or off. Use it when the user asks to turn read-aloud on or off, also by voice in listening mode. Take the wish only from their words. Never for music, media volume, the microphone or listening mode; a question about reading aloud stays answer_in_chat.

@@ -1,0 +1,1 @@
+— text recognized on this device (OCR)

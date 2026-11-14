@@ -1,0 +1,1 @@
+— text extracted on this device (DOCX)

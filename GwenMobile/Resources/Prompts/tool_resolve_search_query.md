@@ -1,0 +1,1 @@
+Turns a follow-up question into one standalone web search query. Use status resolved with the query when conversation and question carry enough to stand alone; use unresolved with an empty query when they do not.

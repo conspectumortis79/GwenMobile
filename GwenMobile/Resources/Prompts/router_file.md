@@ -1,0 +1,1 @@
+ A file is in play and its text was extracted on the device into the user message (## FILE ... ## END OF FILE); a question about it is answer_in_chat, as is translating or quoting it, and numbers from it shown as a drawn graphic are {{create_tool}} - never search the web for numbers already in the file.

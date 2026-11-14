@@ -1,0 +1,60 @@
+included:
+  - GwenMobile
+  - GwenMobileTests
+  - GwenMobileProbes
+  - GwenMobileShell
+  - GwenMobileDevice
+  - GwenMobileLiveActivity
+  - GwenMobileSystem
+  - GwenMobileAdapters
+
+excluded:
+  - build
+  - GwenMobile/Shared/L10nTable.swift
+
+disabled_rules:
+  - closure_parameter_position
+  - redundant_discardable_let
+  - nesting
+  - implicit_optional_initialization
+  - line_length
+  - multiple_closures_with_trailing_closure
+  - non_optional_string_data_conversion
+  - optional_data_string_conversion
+  - statement_position
+  - switch_case_alignment
+  - trailing_comma
+  - vertical_parameter_alignment
+  - vertical_whitespace
+
+identifier_name:
+  min_length: 1
+  max_length: 60
+
+type_name:
+  min_length: 1
+  max_length: 60
+
+function_parameter_count:
+  warning: 10
+  error: 20
+
+function_body_length:
+  warning: 200
+  error: 350
+
+type_body_length:
+  warning: 1100
+  error: 1600
+
+file_length:
+  warning: 1500
+  error: 2500
+
+cyclomatic_complexity:
+  warning: 100
+  error: 150
+
+large_tuple:
+  warning: 5
+  error: 6

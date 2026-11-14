@@ -1,0 +1,2 @@
+## PRODUCT TERMS
+{{terms}}
