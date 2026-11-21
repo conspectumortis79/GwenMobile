@@ -1,0 +1,1 @@
+A wish to generate, create or draw a video is {{video_tool}}. It is never create_picture, find_pictures or answer_in_chat, also when the video is described with a subject that also fits a picture. A question about a video, or about an attached video, is answer_in_chat.

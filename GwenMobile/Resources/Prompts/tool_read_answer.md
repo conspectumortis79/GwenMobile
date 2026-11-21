@@ -1,0 +1,1 @@
+Reads the app's last answer out loud once, even when reading answers aloud is switched off. Use it when the user wants the previous answer read to them, also by voice in listening mode. Never to switch reading aloud on for good ({{read_aloud_tool}}), never for music, never for reading something up silently.

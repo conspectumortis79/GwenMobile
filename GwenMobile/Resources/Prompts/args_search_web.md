@@ -1,0 +1,2 @@
+query=One standalone search query in the user's language from the newest message alone: keep its place, name and topic; inherit nothing from the earlier conversation when the newest message names its own; never replace its place with one from the conversation. Add a date only when the user's words name it, never the current date.
+detail=true only when the user wants more about the earlier research answer and names no new topic or place; false otherwise

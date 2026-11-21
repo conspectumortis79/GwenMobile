@@ -1,0 +1,1 @@
+— {{pages}} pages, text layer read on this device

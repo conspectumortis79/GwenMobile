@@ -1,0 +1,1 @@
+Turns a picture already in the chat or attached here black and white, grey or monochrome. Use it for every wish that only removes colours, never edit_picture; the app does it on the phone at once. Use edit_picture when the wish also changes something else.

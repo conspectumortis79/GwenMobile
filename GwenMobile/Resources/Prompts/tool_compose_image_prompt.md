@@ -1,0 +1,1 @@
+Writes the final prompt for an image model from the conversation and the new wish. Use status resolved with the prompt when a self-contained picture description is possible; use unresolved with an empty prompt when not.

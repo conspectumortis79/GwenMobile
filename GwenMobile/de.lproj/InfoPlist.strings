@@ -1,0 +1,12 @@
+CFBundleDisplayName = "GwenMobile";
+NSAppleMusicUsageDescription = "GwenMobile spielt die Titel, Künstler, Alben und Playlists, die du dir wünschst, aus deiner Mediathek und von Apple Music.";
+NSCalendarsFullAccessUsageDescription = "GwenMobile braucht Kalender-Zugriff, damit ich Termine für dich anlegen, ändern und löschen kann.";
+NSRemindersFullAccessUsageDescription = "GwenMobile braucht Erinnerungs-Zugriff, damit ich Erinnerungen, Einkaufslisten und Aufgaben für dich anlegen, ändern und abhaken kann.";
+NSAlarmKitUsageDescription = "GwenMobile braucht Alarm-Zugriff, damit ich den iPhone-Timer für dich stellen kann; er klingelt und leuchtet, wenn die Zeit um ist.";
+NSCameraUsageDescription = "GwenMobile verwendet die Kamera, damit du Fotos an das Vision-Modell senden kannst.";
+NSContactsUsageDescription = "GwenMobile liest deine Kontakte auf dem Gerät, damit ich die Person anrufen kann, die du nennst.";
+NSLocalNetworkUsageDescription = "GwenMobile verbindet sich mit einem KI-Server in deinem lokalen Netz (zum Beispiel Ollama auf deinem Mac), wenn du ihn als OpenAI-kompatiblen Anbieter einträgst.";
+NSLocationWhenInUseUsageDescription = "GwenMobile braucht deinen Standort, damit ich dir nächste Geschäfte, Apotheken oder Adressen zeigen und die Route dorthin öffnen kann.";
+NSMicrophoneUsageDescription = "GwenMobile nimmt deine Sprache auf, damit die iOS-Spracherkennung dein Diktat in Text umwandeln kann.";
+NSPhotoLibraryAddUsageDescription = "GwenMobile speichert generierte Bilder in deiner Fotos-App.";
+NSSpeechRecognitionUsageDescription = "GwenMobile nutzt die Spracherkennung von iOS, um dein Diktat direkt auf dem Gerät in Text umzuwandeln.";

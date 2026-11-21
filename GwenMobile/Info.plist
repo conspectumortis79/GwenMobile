@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.mortis.gwenmobile.pricecheck</string>
+	</array>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>GwenMobile</string>
+	<key>INAlternativeAppNames</key>
+	<array>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Gwen</string>
+			<key>INAlternativeAppNamePronunciationHint</key>
+			<string>Gwen</string>
+		</dict>
+	</array>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.mortis.gwenmobile</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>gwenmobile</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>GwenDefaultDialer</key>
+	<string>$(GWEN_DIALER_ACTIVE)</string>
+	<key>GwenCarrierMessaging</key>
+	<string>$(GWEN_MESSAGING_ACTIVE)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>spotify</string>
+	</array>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>GwenMobile connects to an AI server on your local network (for example Ollama on your Mac) when you add it as an OpenAI-compatible provider.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>GwenMobile needs calendar access so it can create, change and delete appointments for you.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>GwenMobile needs reminders access so it can create, change and tick off reminders, shopping lists and tasks for you.</string>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>GwenMobile needs alarm access so it can start the iPhone's own timer for you, which then rings and lights up when the time is up.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>GwenMobile reads your contacts on the device so it can call the person you name.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>GwenMobile plays the songs, artists, albums and playlists you ask for from your music library and Apple Music.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>GwenMobile uses the camera so you can send photos to the vision model.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>GwenMobile needs your location so it can show you nearby shops, pharmacies and addresses and open a route to them.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>GwenMobile records your speech so the iOS speech recognition can turn your dictation into text.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>GwenMobile uses the iOS speech recognition to transcribe your dictation right on the device.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>GwenMobile saves generated pictures to your Photos app.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>fetch</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+</dict>
+</plist>

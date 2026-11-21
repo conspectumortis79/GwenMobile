@@ -1,0 +1,1 @@
+The generation model receives {{pictures}} pictures of this conversation, in the order they appeared and numbered from 1 (the oldest) to {{pictures}} (the newest). Name the picture that must be edited by that number, describe it by its content too, and say which other picture is the colour, style or detail reference.

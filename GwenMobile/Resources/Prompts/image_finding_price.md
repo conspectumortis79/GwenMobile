@@ -1,0 +1,1 @@
+price shown on the picture: {{value}}
